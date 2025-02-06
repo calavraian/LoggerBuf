@@ -4,6 +4,7 @@ import inspect
 import logging
 import os
 import threading
+import settings_globals as defaults
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler
@@ -30,7 +31,7 @@ class LoggingUtils():
     def get_date_last_record(file_name):
         last_record = ""
         with open(file_name, 'r') as f:
-            for line in f.readlines():
+            for line in reversed(f.readlines()):
                 if line.strip():  # Skip empty lines
                     last_record = line.strip()
                     break
@@ -43,7 +44,14 @@ class LoggingUtils():
         return last_record_date
 
 class LoggerSettings:
-    def __init__(self, name: str, logs_base_dir: str = ".", backup_dir: str = "history", file_size=1024 , stream: StreamLevel = StreamLevel.ONLY_FILE):
+    def __init__(
+            self,
+            name: str = defaults.LOGGING_LOGGER_NAME,
+            logs_base_dir: str = ".",
+            backup_dir: str = defaults.LOGGING_BACKUP_DIR,
+            file_size = defaults.LOGGING_FILE_SIZE,
+            stream: StreamLevel = StreamLevel.ONLY_FILE,
+        ):
         """
         Constructor for LoggerSettings.
 
@@ -124,21 +132,20 @@ class LoggerSettings:
 
 class Logger:
     __loggers = {}
-    __log_dir = "logs"
-    __log_file = "logs"
-    __debug_log_file = "debug_logs"
-    __backup_count = 5
     __log_format = '[{asctime}] >>{name}<< ({file_name}::{caller_class}::{parent_func}->{line_no}) - *{levelname}* - message::>{message}'
     __lock = threading.Lock()
 
-    def __init__(self, settings: LoggerSettings):
+    def __init__(self, settings: LoggerSettings = None):
+        if not settings:
+            settings = LoggerSettings()
+        
         Logger.__lock.acquire()
         if settings.get_name() not in Logger.__loggers:
             self.__settings = settings
             
             full_path_logs = self.__full_path_logs()
-            log_file = os.path.join(full_path_logs, f"{Logger.__log_file}_{self.__settings.get_name()}.log")
-            debug_log_file = os.path.join(full_path_logs, f"{Logger.__debug_log_file}_{self.__settings.get_name()}.log")
+            log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_MAIN_FILE_NAME}_{self.__settings.get_name()}.log")
+            debug_log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_DEBUG_FILE_NAME}_{self.__settings.get_name()}.log")
 
             info_handler = self.__create_size_time_rotating_handler(filename=log_file, logLevel=logging.INFO)
             degug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
@@ -159,11 +166,11 @@ class Logger:
         Logger.__lock.release()
 
     def __create_file_rotating_handler(self, filename: str, logLevel):
-        handler = RotatingFileHandler(filename=filename, backupCount=Logger.__backup_count, maxBytes=self.__settings.get_file_size())
+        handler = RotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
     
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
-        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=Logger.__backup_count, maxBytes=self.__settings.get_file_size())
+        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
 
     def __create_stream_handler(self):
@@ -182,7 +189,7 @@ class Logger:
 
     def __full_path_logs(self):
         logs_base_dir = self.__settings.get_logs_base_dir() if self.__settings.get_logs_base_dir() != "." else os.getcwd()
-        full_path_logs = os.path.join(logs_base_dir, Logger.__log_dir)
+        full_path_logs = os.path.join(logs_base_dir, defaults.LOGGING_BASE_DIR)
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 
@@ -195,7 +202,7 @@ class Logger:
 
         if handler.rollover == RolloverType.TIME:
             last_record_date = LoggingUtils.get_date_last_record(handler.baseFilename)
-            current_date = last_record_date if last_record_date else current_date
+            current_date = last_record_date or current_date
         
         current_date_str = current_date.strftime("%Y-%m-%d")
         full_path_logs = os.path.join(path, self.__settings.get_backup_dir(), current_date_str)
