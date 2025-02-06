@@ -208,7 +208,7 @@ class Logger:
         full_path_logs = os.path.join(path, self.__settings.get_backup_dir(), current_date_str)
         os.makedirs(full_path_logs, exist_ok=True)
         
-        log_file_name = f"{base_name}_{current_date_str}{ext}{roration_ext}.gz"
+        log_file_name = f"{base_name}_{current_date_str}{roration_ext}{ext}.gz"
         handler.rollover == RolloverType.NONE
         return os.path.join(full_path_logs, log_file_name)
 
