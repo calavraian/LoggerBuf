@@ -1,5 +1,4 @@
 import datetime
-import threading
 
 from data_logs import klaks_logging_pb2, generic_log_pb2
 from debulogger import Logger, StreamLevel, LoggerSettings

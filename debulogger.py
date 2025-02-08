@@ -20,14 +20,30 @@ class StreamLevel(Enum):
     ONLY_FILE = 2
     FILE_CONSOLE = 3
 
-class RotatingFrequency(Enum):
-    DAYLY = 1
-    EVERY_OTHER_DAY = 2
-    WEEKLY = 3
-    MONTHLY = 4
+class RolloverType(Enum):
+    NONE = 0
+    TIME = 1
+    SIZE = 2
+
+class LoggingUtils():
+    @staticmethod
+    def get_date_last_record(file_name):
+        last_record = ""
+        with open(file_name, 'r') as f:
+            for line in f.readlines():
+                if line.strip():  # Skip empty lines
+                    last_record = line.strip()
+                    break
+        try:
+            last_record_date = datetime.datetime.strptime(last_record[1:11], "%Y-%m-%d").date()
+        except Exception as e:
+            print(f"Not valid date extracted from file: {file_name}, line: {last_record}, trying to convert: {last_record[1:11]}, error: {e}")
+            last_record_date = None
+        
+        return last_record_date
 
 class LoggerSettings:
-    def __init__(self, name: str, logs_base_dir: str = ".", backup_dir: str = "history", file_size=1024 , stream: StreamLevel = StreamLevel.ONLY_FILE, frequency: RotatingFrequency = RotatingFrequency.DAYLY):
+    def __init__(self, name: str, logs_base_dir: str = ".", backup_dir: str = "history", file_size=1024 , stream: StreamLevel = StreamLevel.ONLY_FILE):
         """
         Constructor for LoggerSettings.
 
@@ -43,15 +59,12 @@ class LoggerSettings:
             Maximum size of each log file in bytes. Defaults to 1024.
         stream : StreamLevel, optional
             Stream level for logging. Defaults to StreamLevel.ONLY_FILE.
-        frequency : RotatingFrequency, optional
-            Frequency for log rotation. Defaults to RotatingFrequency.DAYLY.
         """
         self.__name = name
         self.__logs_base_dir = logs_base_dir
         self.__backup_dir = backup_dir
         self.__file_size = file_size
         self.__stream = stream
-        self.__frequency = frequency
     
     def get_name(self):
         """
@@ -108,17 +121,6 @@ class LoggerSettings:
             The stream type for the logger.
         """
         return self.__stream
-    
-    def get_frequency(self):
-        """
-        Gets the frequency for log rotation.
-
-        Returns
-        -------
-        RotatingFrequency
-            The frequency for log rotation.
-        """
-        return self.__frequency
 
 class Logger:
     __loggers = {}
@@ -138,15 +140,15 @@ class Logger:
             log_file = os.path.join(full_path_logs, f"{Logger.__log_file}_{self.__settings.get_name()}.log")
             debug_log_file = os.path.join(full_path_logs, f"{Logger.__debug_log_file}_{self.__settings.get_name()}.log")
 
-            info_handler = self.__create_rotating_handler(filename=log_file, logLevel=logging.INFO)
-            degug_handler = self.__create_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
+            info_handler = self.__create_size_time_rotating_handler(filename=log_file, logLevel=logging.INFO)
+            degug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
             stream_handler = self.__create_stream_handler()
 
             logger = logging.getLogger(self.__settings.get_name())
 
             if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
-                logger.addHandler(degug_handler)
                 logger.addHandler(info_handler)
+                logger.addHandler(degug_handler)
 
             if self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE):
                 logger.addHandler(stream_handler)
@@ -156,21 +158,27 @@ class Logger:
             self.__settings = Logger.__loggers[settings.get_name()][0]
         Logger.__lock.release()
 
-    def __create_rotating_handler(self, filename: str, logLevel):
-        log_formatter = logging.Formatter(Logger.__log_format, style='{')
+    def __create_file_rotating_handler(self, filename: str, logLevel):
         handler = RotatingFileHandler(filename=filename, backupCount=Logger.__backup_count, maxBytes=self.__settings.get_file_size())
-        handler.rotator = self.__gzip_rotator
-        handler.namer = self.__gzip_namer
+        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
+    
+    def __create_size_time_rotating_handler(self, filename: str, logLevel):
+        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=Logger.__backup_count, maxBytes=self.__settings.get_file_size())
+        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
+
+    def __create_stream_handler(self):
+        handler = logging.StreamHandler()
+        return self.__config_handler(handler=handler, logLevel=logging.DEBUG)
+
+    def __config_handler(self, handler, logLevel, rotator=False):
+        log_formatter = logging.Formatter(Logger.__log_format, style='{')
         handler.setFormatter(log_formatter)
         handler.setLevel(logLevel)
+        if rotator:
+            handler.rotator = self.__gzip_rotator
+            handler.namer = self.__gzip_namer
+        
         return handler
-    
-    def __create_stream_handler(self):
-        log_formatter = logging.Formatter(Logger.__log_format, style='{')
-        stream_handler = logging.StreamHandler()
-        stream_handler.setFormatter(log_formatter)
-        stream_handler.setLevel(logging.DEBUG)
-        return stream_handler
 
     def __full_path_logs(self):
         logs_base_dir = self.__settings.get_logs_base_dir() if self.__settings.get_logs_base_dir() != "." else os.getcwd()
@@ -182,16 +190,23 @@ class Logger:
         base_path, roration_ext = os.path.splitext(name)
         path, full_name = os.path.split(base_path)
         base_name, ext = os.path.splitext(full_name)
+        handler = self.__get_handler_rotating()
+        current_date = datetime.datetime.now().date()
 
-        current_date = datetime.datetime.now().strftime("%Y-%m-%d")
-        full_path_logs = os.path.join(path, self.__settings.get_backup_dir(), current_date)
+        if handler.rollover == RolloverType.TIME:
+            last_record_date = LoggingUtils.get_date_last_record(handler.baseFilename)
+            current_date = last_record_date if last_record_date else current_date
+        
+        current_date_str = current_date.strftime("%Y-%m-%d")
+        full_path_logs = os.path.join(path, self.__settings.get_backup_dir(), current_date_str)
         os.makedirs(full_path_logs, exist_ok=True)
         
-        log_file_name = f"{base_name}_{current_date}{ext}{roration_ext}.gz"
+        log_file_name = f"{base_name}_{current_date_str}{ext}{roration_ext}.gz"
+        handler.rollover == RolloverType.NONE
         return os.path.join(full_path_logs, log_file_name)
 
     def __gzip_rotator(self, source, dest):
-        with open(source, "rb") as sf, gzip.open(dest, 'wb', )as df:
+        with open(source, "rb") as sf, gzip.open(dest, 'wb') as df:
             df.write(sf.read())
         os.remove(source)
 
@@ -230,6 +245,13 @@ class Logger:
     def __log_message(self, message, method):
         with Logger.__lock:
             threading.Thread(target=method, kwargs={"msg": message, "extra": self.__get_extras()}).start()
+    
+    def __get_handler_rotating(self):
+        logger = self.__get_logger()
+        for handler in logger.handlers:
+            if handler.rollover != RolloverType.NONE:
+                return handler
+        return None
 
     def setLoggerToDebug(self):
         self.setLoggerToLevel(LogLevel.DEBUG)
@@ -264,3 +286,23 @@ class Logger:
 
     def critical(self, message):
         self.__log_message(message=message, method=self.__get_logger().critical)
+
+class SizedTimedRotatingFileHandler(RotatingFileHandler):
+    def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=False):        
+        super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
+        self.rollover = RolloverType.NONE
+
+    def shouldRollover(self, record):
+        self.rollover = RolloverType.NONE
+        last_record_date = LoggingUtils.get_date_last_record(self.baseFilename)
+        current_date = datetime.datetime.now().date()
+
+        if last_record_date and current_date != last_record_date:
+            self.rollover = RolloverType.TIME
+            return True
+
+        rollover = super().shouldRollover(record)
+        if rollover:
+             self.rollover = RolloverType.SIZE
+        
+        return rollover
