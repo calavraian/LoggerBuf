@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+import "event_status.proto";
+import "event_example.proto";
+
+package main_data;
+
+message Event {
+    // The type of event. Add event types in [EventTypes].
+    enum_control.EventTypes event_type = 1;
+
+    // The timestamp of the event is set by the server
+    string timestamp = 2;
+
+    // Optional note for the event.
+    string general_note = 3;
+    
+    // The status of the event is set by the app. Update [Status] list.
+    enum_control.Status status = 4;
+
+    // Event data example, you can create your own sub-events
+    ExampleSubEvent example_sub_event = 5;
+}

@@ -1,42 +1,42 @@
-import datetime
-
-from data_logs import klaks_logging_pb2, generic_log_pb2
+from data_logs import main_data_pb2, event_status_pb2, event_example_pb2
 from debulogger import Logger, StreamLevel, LoggerSettings
+from eventlogger import EventLogger
 
-class ClassOne:
+"""
+This class is an example of how to use the EventLogger class to log events
+and the Logger class to log messages.
+
+This class can be removed from the project.
+"""
+class ExampleClientClass:
     def __init__(self):
         loggerSettings = LoggerSettings(name='MAIN_LOGIC', stream=StreamLevel.FILE_CONSOLE)
         self.logger = Logger(loggerSettings)
         self.logger.setLoggerToDebug()
+
+        self.eventLogger = EventLogger()
 
     def operation(self):
         self.logger.debug("Esto es un debug")
         self.logger.info("Esto es un info - primer mensaje")
         self.logger.info("Esto es un info - segundo mensaje")
 
-    def log_message(self, level, message, metadata={}):
-        generic_log = generic_log_pb2.Generic_log()
-        generic_log.message = "Message inside generic log"
-        generic_log.status = generic_log_pb2.Generic_log.Status.STATUS_ACTIVE
+    def log_message(self):
+        example_event = event_example_pb2.ExampleSubEvent()
+        example_event.name = "Event name 1 here"
+        example_event.description = "Event description for event 1"
+        example_event.counter = 1
+        example_event.operation_type = event_example_pb2.ExampleSubEvent.OperationType.OPERATION_DATA_READ
 
-        log_entry = klaks_logging_pb2.Klaks_LogEntry()
-        log_entry.timestamp = datetime.datetime.now().isoformat()
-        log_entry.level = level
-        log_entry.message = message
-        log_entry.metadata.update(metadata)
-        log_entry.generic_log.CopyFrom(generic_log)
+        main_data = main_data_pb2.Event()
+        main_data.event_type = event_status_pb2.EventTypes.EXAMPLE_EVENT_API_INVOKED
+        main_data.general_note = "Example not for event"
+        main_data.status = event_status_pb2.Status.EXAMPLE_EVENT_STATUS_STARTED
+        main_data.example_sub_event.CopyFrom(example_event)
 
-        # Serialize to bytes
-        serialized_entry = log_entry.SerializeToString()
-        print(log_entry)
-        print("---")
-        print(serialized_entry.decode('utf-8'))
-        print("---")
-        print("---")
-        print(klaks_logging_pb2.Klaks_LogEntry.FromString(serialized_entry))
+        self.eventLogger.create_event(main_data)
 
 if __name__ == "__main__":
-    class_one = ClassOne()
-    # class_one.log_message(level='INFO', message='Esto es un info', metadata={'file_name': 'class_one.py', 'caller_class': 'class_one'})
+    class_one = ExampleClientClass()
     class_one.operation()
-    print("fin main")
+    class_one.log_message()

@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package enum_control;
+
+/**
+* General status, used to define a current status of an event
+* add specific statuses for the different types of events here
+* define and reserve a range of values for each event.
+*/    
+enum Status {
+    // Generic statuses for any event tyoe
+    // Range: 0-50
+    // Next value: 6
+    STATUS_UNSPECIFIED = 0;
+    STATUS_PENDING = 1;
+    STATUS_ACTIVE = 2;
+    STATUS_COMPLETED = 3;
+    STATUS_FAILED = 4;
+    STATUS_ABORTED = 5;
+
+    // Specific statuses for the example event
+    // Range: 51-100
+    // Next value: 54
+    EXAMPLE_EVENT_STATUS_STARTED = 51;
+    EXAMPLE_EVENT_STATUS_COMPLETED = 52;
+    EXAMPLE_EVENT_STATUS_FAILED = 53;
+}
+
+/**
+* All events to be logged need to be registered here first
+* define and reserve a range of values for each event.
+*/
+enum EventTypes {
+    // Generic event types, can be used for general logging
+    // in case a specific event type is not defined.
+    // Range: 0-100
+    // Next value: 6
+    EVENT_UNSPECIFIED = 0;
+    EVENT_GENERIC = 1;
+    EVENT_MAIN = 2;
+    EVENT_DATA_BASE_PROCESSING = 3;
+    EVENT_API_REQUEST = 4;
+    EVENT_API_RESPONSE = 5;
+
+    // Specific event types for the example event
+    // Range: 101-200
+    // Next value: 106
+    EXAMPLE_EVENT_API_INVOKED = 101;
+    EXAMPLE_EVENT_API_RESPONSE = 102;
+    EXAMPLE_EVENT_DATA_PROCESSED = 104;
+    EXAMPLE_EVENT_DATA_STORED = 105;
+}

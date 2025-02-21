@@ -64,7 +64,7 @@ class LoggerSettings:
         backup_dir : str, optional
             Directory for backup logs. Defaults to "history".
         file_size : int, optional
-            Maximum size of each log file in bytes. Defaults to 1024.
+            Maximum size of each log file in bytes.
         stream : StreamLevel, optional
             Stream level for logging. Defaults to StreamLevel.ONLY_FILE.
         """

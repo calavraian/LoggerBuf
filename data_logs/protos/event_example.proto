@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+/**
+* This is a generic sub-event just for example
+* porpuses, you can create your own sub-events
+* by creating a new file in the protos folder.
+*
+* This fil can be removed or edited as you wish.
+*/
+message ExampleSubEvent {
+    enum OperationType {
+        OPERATION_UNSPECIFIED = 0;
+        OPERATION_DATA_READ = 1;
+        OPERATION_DATA_WRITE = 2;
+        OPERATION_DATA_UPDATE = 3;
+        OPERATION_DATA_DELETE = 4;
+    }
+
+    string name = 1;
+    string description = 2;
+    int64 counter = 3;
+    OperationType operation_type = 4;
+}
