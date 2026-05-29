@@ -250,3 +250,7 @@ class EventLogger:
 
     def create_event(self, event: main_data_pb2.Event):
         self.__writer.write_event(event)
+
+    # Alias to offer a cleaner telemetry API
+    send = create_event
+
