@@ -29,19 +29,47 @@ class RolloverType(Enum):
 class LoggingUtils():
     @staticmethod
     def get_date_last_record(file_name):
-        last_record = ""
-        with open(file_name, 'r') as f:
-            for line in reversed(f.readlines()):
-                if line.strip():  # Skip empty lines
-                    last_record = line.strip()
-                    break
-        try:
-            last_record_date = datetime.datetime.strptime(last_record[1:11], "%Y-%m-%d").date()
-        except Exception as e:
-            print(f"Not valid date extracted from file: {file_name}, line: {last_record}, trying to convert: {last_record[1:11]}, error: {e}")
-            last_record_date = None
+        if not os.path.exists(file_name) or os.path.getsize(file_name) == 0:
+            return None
         
-        return last_record_date
+        last_line = ""
+        try:
+            with open(file_name, 'rb') as f:
+                # Seek to end of file
+                f.seek(0, os.SEEK_END)
+                position = f.tell()
+                buffer_size = 1024
+                # Move backwards in chunks of 1KB
+                while position > 0:
+                    read_size = min(buffer_size, position)
+                    position -= read_size
+                    f.seek(position, os.SEEK_SET)
+                    chunk = f.read(read_size)
+                    
+                    # Split lines by binary newline
+                    lines = chunk.split(b'\n')
+                    # Find the last non-empty line
+                    for line in reversed(lines):
+                        decoded = line.strip().decode('utf-8', errors='ignore')
+                        if decoded:
+                            last_line = decoded
+                            break
+                    if last_line:
+                        break
+        except Exception as e:
+            print(f"Error reading last record of {file_name}: {e}")
+            return None
+
+        if not last_line:
+            return None
+            
+        try:
+            date_str = last_line[1:11]
+            return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception as e:
+            print(f"Not valid date extracted from last line of {file_name}: '{last_line}', error: {e}")
+            return None
+
 
 class LoggerSettings:
     def __init__(
