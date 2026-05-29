@@ -1,13 +1,14 @@
 import datetime
 import gzip
-import inspect
 import logging
 import os
+import queue
+import sys
 import threading
 import settings_globals as defaults
 
 from enum import Enum
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
 
 class LogLevel(Enum):
     DEBUG = logging.DEBUG
@@ -25,6 +26,23 @@ class RolloverType(Enum):
     NONE = 0
     TIME = 1
     SIZE = 2
+
+class LoggerBufQueueHandler(QueueHandler):
+    def __init__(self, queue_obj, strategy="lossy"):
+        super().__init__(queue_obj)
+        self.strategy = strategy
+
+    def enqueue(self, record):
+        if self.strategy == "lossy":
+            try:
+                self.queue.put_nowait(record)
+            except queue.Full:
+                # Silently drop under high load to protect caller thread performance
+                pass
+        else:
+            # "lossless" -> block client thread until space is available
+            self.queue.put(record)
+
 
 class LoggingUtils():
     @staticmethod
