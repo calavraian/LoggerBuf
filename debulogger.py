@@ -178,38 +178,60 @@ class LoggerSettings:
 
 class Logger:
     __loggers = {}
-    __log_format = '[{asctime}] >>{name}<< ({file_name}::{caller_class}::{parent_func}->{line_no}) - *{levelname}* - message::>{message}'
+    __listeners = {}
+    __log_format = '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
     __lock = threading.Lock()
 
     def __init__(self, settings: LoggerSettings = None):
         if not settings:
             settings = LoggerSettings()
         
-        Logger.__lock.acquire()
-        if settings.get_name() not in Logger.__loggers:
-            self.__settings = settings
-            
-            full_path_logs = self.__full_path_logs()
-            log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_MAIN_FILE_NAME}_{self.__settings.get_name()}.log")
-            debug_log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_DEBUG_FILE_NAME}_{self.__settings.get_name()}.log")
+        with Logger.__lock:
+            name = settings.get_name()
+            if name not in Logger.__loggers:
+                self.__settings = settings
+                
+                # Retrieve configuration with safe defaults
+                queue_max_size = getattr(defaults, 'LOGGING_QUEUE_MAX_SIZE', 10000)
+                queue_strategy = getattr(defaults, 'LOGGING_QUEUE_STRATEGY', 'lossy')
+                
+                full_path_logs = self.__full_path_logs()
+                log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_MAIN_FILE_NAME}_{name}.log")
+                debug_log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_DEBUG_FILE_NAME}_{name}.log")
 
-            info_handler = self.__create_size_time_rotating_handler(filename=log_file, logLevel=logging.INFO)
-            degug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
-            stream_handler = self.__create_stream_handler()
+                info_handler = self.__create_size_time_rotating_handler(filename=log_file, logLevel=logging.INFO)
+                debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
+                stream_handler = self.__create_stream_handler()
 
-            logger = logging.getLogger(self.__settings.get_name())
+                dest_handlers = []
+                if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
+                    dest_handlers.append(info_handler)
+                    dest_handlers.append(debug_handler)
 
-            if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
-                logger.addHandler(info_handler)
-                logger.addHandler(degug_handler)
+                if self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE):
+                    dest_handlers.append(stream_handler)
 
-            if self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE):
-                logger.addHandler(stream_handler)
+                # Initialize Queue
+                log_queue = queue.Queue(maxsize=queue_max_size)
+                
+                # Custom Queue Handler
+                queue_handler = LoggerBufQueueHandler(log_queue, strategy=queue_strategy)
+                queue_handler.setLevel(logging.DEBUG)
+                
+                # Native Logger Setup
+                logger = logging.getLogger(name)
+                logger.setLevel(logging.DEBUG)
+                logger.propagate = False
+                logger.addHandler(queue_handler)
 
-            Logger.__loggers[self.__settings.get_name()] = (self.__settings, logger)
-        else:
-            self.__settings = Logger.__loggers[settings.get_name()][0]
-        Logger.__lock.release()
+                # Queue Listener to dispatch logs to real handlers on a daemon worker thread
+                listener = QueueListener(log_queue, *dest_handlers, respect_handler_level=True)
+                listener.start()
+
+                Logger.__loggers[name] = (self.__settings, logger)
+                Logger.__listeners[name] = listener
+            else:
+                self.__settings = Logger.__loggers[name][0]
 
     def __create_file_rotating_handler(self, filename: str, logLevel):
         handler = RotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
@@ -246,7 +268,7 @@ class Logger:
         handler = self.__get_handler_rotating()
         current_date = datetime.datetime.now().date()
 
-        if handler.rollover == RolloverType.TIME:
+        if handler and handler.rollover == RolloverType.TIME:
             last_record_date = LoggingUtils.get_date_last_record(handler.baseFilename)
             current_date = last_record_date or current_date
         
@@ -255,7 +277,8 @@ class Logger:
         os.makedirs(full_path_logs, exist_ok=True)
         
         log_file_name = f"{base_name}_{current_date_str}{roration_ext}{ext}.gz"
-        handler.rollover == RolloverType.NONE
+        if handler:
+            handler.rollover == RolloverType.NONE
         return os.path.join(full_path_logs, log_file_name)
 
     def __gzip_rotator(self, source, dest):
@@ -263,47 +286,34 @@ class Logger:
             df.write(sf.read())
         os.remove(source)
 
-    def __parent_func(self):
-        frame = self.__get_inspect_frame()
-        return frame.f_code.co_name
-
-    def __parent_file_name(self):
-        frame = self.__get_inspect_frame()
-        return os.path.split(frame.f_code.co_filename)[1]
-
-    def __parent_line_no(self):
-        frame = self.__get_inspect_frame()
-        return frame.f_code.co_firstlineno
-    
-    def __caller_class_name(self):
-        frame = self.__get_inspect_frame()
-        return frame.f_locals.get('self', None).__class__.__name__ if 'self' in frame.f_locals else None
-    
-    def __get_inspect_frame(self, steps=5):
-        frame = inspect.currentframe()
-        while steps > 0:
-            if frame.f_back:
-                frame = frame.f_back
-            else:
-                break
-            steps -= 1
-        return frame
+    def __get_caller_class(self):
+        try:
+            # Stack levels:
+            # 0: __get_caller_class
+            # 1: __log_message
+            # 2: debug/info/etc.
+            # 3: Caller of debug/info/etc.
+            frame = sys._getframe(3)
+            if 'self' in frame.f_locals:
+                return frame.f_locals['self'].__class__.__name__
+        except Exception:
+            pass
+        return "None"
 
     def __get_logger(self):        
         return Logger.__loggers[self.__settings.get_name()][1]
-    
-    def __get_extras(self):
-        return {"file_name": self.__parent_file_name(), "caller_class": self.__caller_class_name(), "parent_func": self.__parent_func(), "line_no": self.__parent_line_no()}
 
-    def __log_message(self, message, method):
-        with Logger.__lock:
-            threading.Thread(target=method, kwargs={"msg": message, "extra": self.__get_extras()}).start()
+    def __log_message(self, level, message):
+        extra = {"caller_class": self.__get_caller_class()}
+        self.__get_logger().log(level, message, extra=extra, stacklevel=3)
     
     def __get_handler_rotating(self):
-        logger = self.__get_logger()
-        for handler in logger.handlers:
-            if handler.rollover != RolloverType.NONE:
-                return handler
+        name = self.__settings.get_name()
+        if name in Logger.__listeners:
+            listener = Logger.__listeners[name]
+            for handler in listener.handlers:
+                if hasattr(handler, 'rollover') and handler.rollover != RolloverType.NONE:
+                    return handler
         return None
 
     def setLoggerToDebug(self):
@@ -326,19 +336,20 @@ class Logger:
             self.__get_logger().setLevel(logLevel.value)
 
     def debug(self, message):
-        self.__log_message(message=message, method=self.__get_logger().debug)
+        self.__log_message(logging.DEBUG, message)
 
     def info(self, message):
-        self.__log_message(message=message, method=self.__get_logger().info)
+        self.__log_message(logging.INFO, message)
 
     def warning(self, message):
-        self.__log_message(message=message, method=self.__get_logger().warning)
+        self.__log_message(logging.WARNING, message)
 
     def error(self, message):
-        self.__log_message(message=message, method=self.__get_logger().error)
+        self.__log_message(logging.ERROR, message)
 
     def critical(self, message):
-        self.__log_message(message=message, method=self.__get_logger().critical)
+        self.__log_message(logging.CRITICAL, message)
+
 
 class SizedTimedRotatingFileHandler(RotatingFileHandler):
     def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=False):        
