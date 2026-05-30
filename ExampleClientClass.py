@@ -91,6 +91,26 @@ class ExampleClientClass:
         # Give background worker threads a brief moment to finish flushing to disk
         time.sleep(1.0)
         self.logger.info(f"Active threads AFTER test and flushing: {threading.active_count()}")
+        
+        # Retrieve and display high-precision queue metrics
+        metrics = self.eventLogger.get_metrics()
+        print("\n" + "="*60)
+        print("📊 LOGGERBUF TELEMETRY QUEUE METRICS DASHBOARD 📊")
+        print("="*60)
+        print(f" - Total Events Queued:                        {metrics['total_queued']}")
+        print(f" - Total Events Processed (Written to disk):    {metrics['total_processed']}")
+        print(f" - Total Events Dropped (Queue Overflow):       {metrics['total_drops']}")
+        print(f" - Peak Concurrent Queue Size (Max Depth):     {metrics['peak_size']}")
+        print(f" - Queue-Empty Transitions (Fully Caught Up):  {metrics['empty_count']}")
+        print(f" - Average Disk Write Time:                    {metrics['avg_write_time_ms']:.4f} ms")
+        print(f" - Min Disk Write Time:                        {metrics['min_write_time_ms']:.4f} ms")
+        print(f" - Max Disk Write Time:                        {metrics['max_write_time_ms']:.4f} ms")
+        print(f" - Total Queue Ingestion Duration (Draining):  {metrics['total_drain_time_s']:.4f} seconds")
+        if metrics['total_drain_time_s'] > 0:
+            speed = metrics['total_processed'] / metrics['total_drain_time_s']
+            print(f" - Ingestion Inflow Processing Speed:          {speed:.1f} events/second")
+        print("="*60 + "\n")
+
 
 if __name__ == "__main__":
     demo = ExampleClientClass()
@@ -115,6 +135,6 @@ if __name__ == "__main__":
         if decoded_events:
             print("\nSample Decoded Event (Protobuf to Python Dict):")
             from google.protobuf.json_format import MessageToDict
-            print(MessageToDict(decoded_events[-1], including_default_value_fields=True))
+            print(MessageToDict(decoded_events[-1], always_print_fields_with_no_presence=True))
     except Exception as e:
         print(f"Failed to decode telemetry file: {e}")
