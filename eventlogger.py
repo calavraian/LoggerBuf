@@ -3,9 +3,72 @@ import gzip
 import os
 import queue
 import threading
+import time
 import settings_globals as defaults
 
 from data_logs import main_data_pb2
+
+class QueueMetrics:
+    def __init__(self):
+        self.lock = threading.Lock()
+        self.peak_size = 0
+        self.total_queued = 0
+        self.total_processed = 0
+        self.total_drops = 0
+        self.empty_count = 0
+        self.total_write_time = 0.0
+        self.min_write_time = float('inf')
+        self.max_write_time = 0.0
+        self.drain_start_time = None
+        self.total_drain_time = 0.0
+
+    def record_enqueue(self, current_qsize):
+        with self.lock:
+            self.total_queued += 1
+            actual_size = current_qsize + 1
+            if actual_size > self.peak_size:
+                self.peak_size = actual_size
+            if actual_size == 1 and self.drain_start_time is None:
+                self.drain_start_time = time.perf_counter()
+
+    def record_dequeue(self, write_duration, current_qsize):
+        with self.lock:
+            self.total_processed += 1
+            self.total_write_time += write_duration
+            if write_duration < self.min_write_time:
+                self.min_write_time = write_duration
+            if write_duration > self.max_write_time:
+                self.max_write_time = write_duration
+                
+            if current_qsize == 0:
+                self.empty_count += 1
+                if self.drain_start_time is not None:
+                    duration = time.perf_counter() - self.drain_start_time
+                    self.total_drain_time += duration
+                    self.drain_start_time = None
+
+    def record_drop(self):
+        with self.lock:
+            self.total_drops += 1
+
+    def get_report(self):
+        with self.lock:
+            avg_write = (self.total_write_time / self.total_processed * 1000) if self.total_processed > 0 else 0.0
+            min_write = (self.min_write_time * 1000) if self.min_write_time != float('inf') else 0.0
+            max_write = (self.max_write_time * 1000)
+            
+            return {
+                "total_queued": self.total_queued,
+                "total_processed": self.total_processed,
+                "total_drops": self.total_drops,
+                "peak_size": self.peak_size,
+                "empty_count": self.empty_count,
+                "avg_write_time_ms": avg_write,
+                "min_write_time_ms": min_write,
+                "max_write_time_ms": max_write,
+                "total_drain_time_s": self.total_drain_time
+            }
+
 
 class EventSettings:
     def __init__(
@@ -82,6 +145,9 @@ class BackgroundEventWriter:
         self.strategy = getattr(defaults, 'EVENT_QUEUE_STRATEGY', 'lossless')
         self.stop_event = threading.Event()
         
+        # In-memory Metrics Collector
+        self.metrics = QueueMetrics()
+        
         # Track active file
         self.full_path_logs = self._get_full_path_logs()
         self.current_filename = os.path.join(self.full_path_logs, f"{defaults.EVENT_MAIN_FILE_NAME}_{self.settings.get_name()}.log")
@@ -92,6 +158,7 @@ class BackgroundEventWriter:
         # Start Worker Thread
         self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-TelemetryWorker", daemon=True)
         self.worker_thread.start()
+
 
     def _get_full_path_logs(self):
         logs_base_dir = self.settings.get_logs_base_dir() if self.settings.get_logs_base_dir() != "." else os.getcwd()
@@ -107,13 +174,14 @@ class BackgroundEventWriter:
         serialized_data = event.SerializeToString()
         
         try:
+            qsize = self.queue.qsize()
             if self.strategy == "lossy":
                 self.queue.put_nowait(serialized_data)
             else:
                 self.queue.put(serialized_data)
+            self.metrics.record_enqueue(qsize)
         except queue.Full:
-            # Drop telemetry log in lossy mode under extreme load
-            pass
+            self.metrics.record_drop()
 
     def stop(self):
         self.stop_event.set()
@@ -132,12 +200,17 @@ class BackgroundEventWriter:
                     self.queue.task_done()
                     break
                 
+                t0 = time.perf_counter()
                 self._write_record(data)
+                duration = time.perf_counter() - t0
+                
+                self.metrics.record_dequeue(duration, self.queue.qsize())
                 self.queue.task_done()
             except queue.Empty:
                 continue
             except Exception as e:
                 print(f"Error in LoggerBuf telemetry worker thread: {e}")
+
 
     def _write_record(self, data: bytes):
         with self.file_lock:
@@ -253,4 +326,11 @@ class EventLogger:
 
     # Alias to offer a cleaner telemetry API
     send = create_event
+
+    def get_metrics(self):
+        """
+        Retrieves a report containing high-precision metrics on the queue's behavior.
+        """
+        return self.__writer.metrics.get_report()
+
 
