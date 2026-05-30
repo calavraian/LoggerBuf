@@ -122,9 +122,34 @@ EVENT_QUEUE_STRATEGY = "lossless"  # Desborde: 'lossless' (bloqueo para no perde
 
 ---
 
-## 📈 Rendimiento & Benchmarks Concurrentes
+## 📈 Rendimiento, Observabilidad & Benchmarks
 
-En las pruebas de estrés bajo concurrencia extrema (lanzando múltiples hilos escribiendo ráfagas continuas de datos):
+`LoggerBuf` no es una caja negra; incluye soporte nativo de **Observabilidad** que te permite extraer métricas precisas del comportamiento de las colas bajo carga en tiempo real:
 
-*   **Rendimiento del Hilo Cliente**: **0.0045 ms (4.5 microsegundos)** en promedio por llamada de log/evento, permitiendo que tu hilo de ejecución principal continúe al 100% de su velocidad de procesamiento.
-*   **Estabilidad de Recursos**: Los hilos activos del proceso se mantienen planos y estables durante la ráfaga (exactamente 1 hilo consumidor por canal de disco), absorbiendo de forma asíncrona la escritura física sin picos de CPU ni sobrecargas.
+```python
+metrics = telemetry.get_metrics()
+print(metrics)
+```
+*Salida:*
+```json
+{
+  "total_queued": 2001,
+  "total_processed": 2001,
+  "total_drops": 0,
+  "peak_size": 1999,
+  "empty_count": 1,
+  "avg_write_time_ms": 0.1230,
+  "min_write_time_ms": 0.0254,
+  "max_write_time_ms": 9.9463,
+  "total_drain_time_s": 0.2519
+}
+```
+
+### Resultados de Benchmarks bajo Concurrencia Extrema
+
+En nuestras pruebas de estrés (lanzando múltiples hilos escribiendo ráfagas continuas de miles de datos concurrentes):
+
+*   **Rendimiento del Hilo Cliente**: **0.0045 ms (4.5 microsegundos)** en promedio por llamada de log/evento, permitiendo que tu hilo de ejecución principal continúe al 100% de su velocidad de procesamiento sin bloqueos.
+*   **Estabilidad de Recursos**: Los hilos activos del proceso se mantienen planos y estables durante la ráfaga (exactamente 1 hilo trabajador de fondo por canal de disco), absorbiendo de forma asíncrona la escritura física sin picos de CPU ni sobrecargas.
+*   **Velocidad de Escritura Real**: El worker procesa y serializa eventos a disco físico a una velocidad promedio de **7,900 eventos por segundo**, requiriendo apenas el **19% de la cola disponible** ante ráfagas instantáneas extremas.
+
