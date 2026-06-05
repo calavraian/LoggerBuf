@@ -141,8 +141,9 @@ class EventSettings:
 class BackgroundEventWriter:
     def __init__(self, settings: EventSettings):
         self.settings = settings
+        from settings_globals import QueueStrategy
         self.queue = queue.Queue(maxsize=getattr(defaults, 'EVENT_QUEUE_MAX_SIZE', 10000))
-        self.strategy = getattr(defaults, 'EVENT_QUEUE_STRATEGY', 'lossless')
+        self.strategy = getattr(defaults, 'EVENT_QUEUE_STRATEGY', QueueStrategy.LOSSLESS)
         self.stop_event = threading.Event()
         
         # In-memory Metrics Collector
@@ -175,7 +176,7 @@ class BackgroundEventWriter:
         
         try:
             qsize = self.queue.qsize()
-            if self.strategy == "lossy":
+            if self.strategy == QueueStrategy.LOSSY:
                 self.queue.put_nowait(serialized_data)
             else:
                 self.queue.put(serialized_data)

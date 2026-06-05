@@ -27,13 +27,15 @@ class RolloverType(Enum):
     TIME = 1
     SIZE = 2
 
+from settings_globals import QueueStrategy
+
 class LoggerBufQueueHandler(QueueHandler):
-    def __init__(self, queue_obj, strategy="lossy"):
+    def __init__(self, queue_obj, strategy: QueueStrategy = QueueStrategy.LOSSY):
         super().__init__(queue_obj)
         self.strategy = strategy
 
     def enqueue(self, record):
-        if self.strategy == "lossy":
+        if self.strategy == QueueStrategy.LOSSY:
             try:
                 self.queue.put_nowait(record)
             except queue.Full:
@@ -193,7 +195,7 @@ class Logger:
                 
                 # Retrieve configuration with safe defaults
                 queue_max_size = getattr(defaults, 'LOGGING_QUEUE_MAX_SIZE', 10000)
-                queue_strategy = getattr(defaults, 'LOGGING_QUEUE_STRATEGY', 'lossy')
+                queue_strategy = getattr(defaults, 'LOGGING_QUEUE_STRATEGY', QueueStrategy.LOSSY)
                 
                 full_path_logs = self.__full_path_logs()
                 log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_MAIN_FILE_NAME}_{name}.log")
