@@ -102,7 +102,7 @@ def main():
     try:
         for ev in events:
             # Convert protobuf message to Python dict
-            ev_dict = MessageToDict(ev, including_default_value_fields=True)
+            ev_dict = MessageToDict(ev, always_print_fields_with_no_presence=True)
             if args.format == "pretty":
                 out_f.write(json.dumps(ev_dict, indent=2, ensure_ascii=False) + "\n")
             else:

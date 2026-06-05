@@ -66,10 +66,10 @@ class LoggingUtils():
                     
                     # Split lines by binary newline
                     lines = chunk.split(b'\n')
-                    # Find the last non-empty line
+                    # Find the last non-empty line starting with '[' (log bracket)
                     for line in reversed(lines):
                         decoded = line.strip().decode('utf-8', errors='ignore')
-                        if decoded:
+                        if decoded and decoded.startswith("["):
                             last_line = decoded
                             break
                     if last_line:
@@ -84,9 +84,9 @@ class LoggingUtils():
         try:
             date_str = last_line[1:11]
             return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
-        except Exception as e:
-            print(f"Not valid date extracted from last line of {file_name}: '{last_line}', error: {e}")
+        except Exception:
             return None
+
 
 
 class LoggerSettings:
@@ -233,10 +233,7 @@ class Logger:
             else:
                 self.__settings = Logger.__loggers[name][0]
 
-    def __create_file_rotating_handler(self, filename: str, logLevel):
-        handler = RotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
-        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
-    
+
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
         handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
