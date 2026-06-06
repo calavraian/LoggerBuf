@@ -20,4 +20,19 @@ message Event {
 
     // Event data example, you can create your own sub-events
     ExampleSubEvent example_sub_event = 5;
+
+    // The name of the EventLogger instance (e.g. MAIN, SECURITY)
+    string logger_name = 6;
+
+    // The file name where the event was generated
+    string caller_file = 7;
+
+    // The class name where the event was generated
+    string caller_class = 8;
+
+    // The function/method name where the event was generated
+    string caller_function = 9;
+
+    // The line number where the event was generated
+    int32 lineno = 10;
 }

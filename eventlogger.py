@@ -323,6 +323,33 @@ class EventLogger:
                 self.__writer = EventLogger.__instances[name][1]
 
     def create_event(self, event: main_data_pb2.Event):
+        # Extract caller information
+        import sys
+        try:
+            # Stack level 2 gets the caller of create_event or send
+            frame = sys._getframe(2)
+            
+            # Check if called via alias 'send', adjust frame level if so
+            if frame.f_code.co_name == 'send':
+                frame = sys._getframe(3)
+
+            event.caller_file = os.path.basename(frame.f_code.co_filename)
+            event.caller_function = frame.f_code.co_name
+            event.lineno = frame.f_lineno
+            
+            if 'self' in frame.f_locals:
+                event.caller_class = frame.f_locals['self'].__class__.__name__
+            else:
+                event.caller_class = "None"
+                
+        except Exception:
+            event.caller_file = "Unknown"
+            event.caller_function = "Unknown"
+            event.lineno = 0
+            event.caller_class = "Unknown"
+            
+        event.logger_name = self.__settings.get_name()
+        
         self.__writer.write_event(event)
 
     # Alias to offer a cleaner telemetry API
