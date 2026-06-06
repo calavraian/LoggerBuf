@@ -287,6 +287,17 @@ class Logger:
             with Logger.__lock:
                 console_filter.is_enabled = False
 
+    def resume_console(self):
+        """
+        Resumes the console output using the previously configured filters.
+        """
+        name = self.__settings.get_name()
+        if name in Logger.__loggers:
+            console_filter = Logger.__loggers[name][2]
+            with Logger.__lock:
+                console_filter.is_enabled = True
+
+
 
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
         handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
