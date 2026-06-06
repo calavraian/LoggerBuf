@@ -46,6 +46,30 @@ class LoggerBufQueueHandler(QueueHandler):
             self.queue.put(record)
 
 
+class ConsoleFilter(logging.Filter):
+    def __init__(self, is_enabled: bool):
+        super().__init__()
+        self.is_enabled = is_enabled
+        self.allowed_classes = None
+        self.allowed_levels = None
+
+    def filter(self, record):
+        if not self.is_enabled:
+            return False
+            
+        if self.allowed_classes is not None:
+            caller_class = getattr(record, 'caller_class', None)
+            if caller_class not in self.allowed_classes:
+                return False
+                
+        if self.allowed_levels is not None:
+            if record.levelno not in self.allowed_levels:
+                return False
+                
+        return True
+
+
+
 class LoggingUtils():
     @staticmethod
     def get_date_last_record(file_name):
@@ -205,13 +229,18 @@ class Logger:
                 debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
                 stream_handler = self.__create_stream_handler()
 
+                # Initialize console filter based on settings
+                console_enabled = self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE)
+                console_filter = ConsoleFilter(is_enabled=console_enabled)
+                stream_handler.addFilter(console_filter)
+                
                 dest_handlers = []
                 if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
                     dest_handlers.append(info_handler)
                     dest_handlers.append(debug_handler)
 
-                if self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE):
-                    dest_handlers.append(stream_handler)
+                # Always add stream_handler, output is controlled by ConsoleFilter
+                dest_handlers.append(stream_handler)
 
                 # Initialize Queue
                 log_queue = queue.Queue(maxsize=queue_max_size)
@@ -230,10 +259,33 @@ class Logger:
                 listener = QueueListener(log_queue, *dest_handlers, respect_handler_level=True)
                 listener.start()
 
-                Logger.__loggers[name] = (self.__settings, logger)
+                Logger.__loggers[name] = (self.__settings, logger, console_filter)
                 Logger.__listeners[name] = listener
             else:
                 self.__settings = Logger.__loggers[name][0]
+
+    def enable_console(self, allowed_classes: list = None, allowed_levels: list = None):
+        """
+        Dynamically enables the console output.
+        Optionally filters by a list of class names or log levels.
+        """
+        name = self.__settings.get_name()
+        if name in Logger.__loggers:
+            console_filter = Logger.__loggers[name][2]
+            with Logger.__lock:
+                console_filter.allowed_classes = allowed_classes
+                console_filter.allowed_levels = allowed_levels
+                console_filter.is_enabled = True
+
+    def disable_console(self):
+        """
+        Dynamically disables the console output.
+        """
+        name = self.__settings.get_name()
+        if name in Logger.__loggers:
+            console_filter = Logger.__loggers[name][2]
+            with Logger.__lock:
+                console_filter.is_enabled = False
 
 
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
