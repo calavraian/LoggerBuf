@@ -11,6 +11,7 @@ from data_logs import main_data_pb2
 class QueueMetrics:
     def __init__(self):
         self.lock = threading.Lock()
+        self.metrics_start_time = datetime.datetime.now().isoformat()
         self.peak_size = 0
         self.total_queued = 0
         self.total_processed = 0
@@ -21,6 +22,8 @@ class QueueMetrics:
         self.max_write_time = 0.0
         self.drain_start_time = None
         self.total_drain_time = 0.0
+        self.min_drain_time = float('inf')
+        self.max_drain_time = 0.0
 
     def record_enqueue(self, current_qsize):
         with self.lock:
@@ -45,29 +48,71 @@ class QueueMetrics:
                 if self.drain_start_time is not None:
                     duration = time.perf_counter() - self.drain_start_time
                     self.total_drain_time += duration
+                    if duration < self.min_drain_time:
+                        self.min_drain_time = duration
+                    if duration > self.max_drain_time:
+                        self.max_drain_time = duration
                     self.drain_start_time = None
 
     def record_drop(self):
         with self.lock:
             self.total_drops += 1
 
-    def get_report(self):
+    def get_report(self, current_qsize=0, keys: list = None, output_format: str = "dict"):
+        import json, csv, io
         with self.lock:
-            avg_write = (self.total_write_time / self.total_processed * 1000) if self.total_processed > 0 else 0.0
-            min_write = (self.min_write_time * 1000) if self.min_write_time != float('inf') else 0.0
-            max_write = (self.max_write_time * 1000)
+            now = datetime.datetime.now()
+            start_dt = datetime.datetime.fromisoformat(self.metrics_start_time)
+            uptime_seconds = (now - start_dt).total_seconds()
             
-            return {
+            avg_write = (self.total_write_time / self.total_processed) if self.total_processed > 0 else 0.0
+            avg_write_ms = avg_write * 1000.0
+            min_write_ms = (self.min_write_time * 1000) if self.min_write_time != float('inf') else 0.0
+            max_write_ms = (self.max_write_time * 1000)
+            
+            avg_drain = (self.total_drain_time / self.empty_count) if self.empty_count > 0 else 0.0
+            min_drain = self.min_drain_time if self.min_drain_time != float('inf') else 0.0
+            max_drain = self.max_drain_time
+            
+            lifetime_throughput_eps = (self.total_processed / uptime_seconds) if uptime_seconds > 0 else 0.0
+            peak_capacity_eps = (1.0 / avg_write) if avg_write > 0 else 0.0
+            
+            report = {
+                "report_generated_at": now.isoformat(),
+                "metrics_start_time": self.metrics_start_time,
+                "uptime_seconds": uptime_seconds,
+                "current_queue_size": current_qsize,
                 "total_queued": self.total_queued,
                 "total_processed": self.total_processed,
                 "total_drops": self.total_drops,
                 "peak_size": self.peak_size,
                 "empty_count": self.empty_count,
-                "avg_write_time_ms": avg_write,
-                "min_write_time_ms": min_write,
-                "max_write_time_ms": max_write,
-                "total_drain_time_s": self.total_drain_time
+                "avg_write_time_ms": avg_write_ms,
+                "min_write_time_ms": min_write_ms,
+                "max_write_time_ms": max_write_ms,
+                "total_drain_time_s": self.total_drain_time,
+                "avg_drain_time_s": avg_drain,
+                "min_drain_time_s": min_drain,
+                "max_drain_time_s": max_drain,
+                "lifetime_throughput_eps": lifetime_throughput_eps,
+                "peak_capacity_eps": peak_capacity_eps
             }
+            
+            if keys:
+                report = {k: report[k] for k in keys if k in report}
+                
+            if output_format == "json":
+                return json.dumps(report, indent=4)
+            elif output_format == "string":
+                return "\n".join([f"{k}: {v}" for k, v in report.items()])
+            elif output_format == "csv":
+                output = io.StringIO()
+                writer = csv.DictWriter(output, fieldnames=report.keys())
+                writer.writeheader()
+                writer.writerow(report)
+                return output.getvalue()
+                
+            return report
 
 
 class EventSettings:
@@ -355,10 +400,11 @@ class EventLogger:
     # Alias to offer a cleaner telemetry API
     send = create_event
 
-    def get_metrics(self):
+    def get_metrics(self, keys: list = None, output_format: str = "dict"):
         """
         Retrieves a report containing high-precision metrics on the queue's behavior.
         """
-        return self.__writer.metrics.get_report()
+        qsize = self.__writer.queue.qsize()
+        return self.__writer.metrics.get_report(current_qsize=qsize, keys=keys, output_format=output_format)
 
 
