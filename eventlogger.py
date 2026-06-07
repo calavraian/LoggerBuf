@@ -201,9 +201,11 @@ class BackgroundEventWriter:
         self.file_lock = threading.Lock()
         self._file = None
         
-        # Start Worker Thread
         self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-TelemetryWorker", daemon=True)
         self.worker_thread.start()
+        
+        # Cache the date of the last record at startup
+        self._cached_last_date = self._get_date_last_record()
 
 
     def _get_full_path_logs(self):
@@ -276,9 +278,14 @@ class BackgroundEventWriter:
 
     def _check_rotation(self):
         current_date = datetime.datetime.now().date()
-        last_date = self._get_date_last_record()
         
-        should_rotate_time = last_date is not None and current_date != last_date
+        # If no file exists yet or it's empty, we just track current date
+        if self._cached_last_date is None:
+            self._cached_last_date = current_date
+            
+        last_date = self._cached_last_date
+        
+        should_rotate_time = current_date != last_date
         
         should_rotate_size = False
         if os.path.exists(self.current_filename):
@@ -292,6 +299,7 @@ class BackgroundEventWriter:
                 self._file = None
             
             self._do_rollover(current_date, last_date, "TIME" if should_rotate_time else "SIZE")
+            self._cached_last_date = current_date
 
     def _get_date_last_record(self):
         if not os.path.exists(self.current_filename) or os.path.getsize(self.current_filename) == 0:
@@ -303,22 +311,34 @@ class BackgroundEventWriter:
                 f.seek(0, os.SEEK_END)
                 position = f.tell()
                 
-                # Seek back up to 4KB to read the last complete record
+                # Seek back starting with 4KB, exponentially backoff up to the entire file
                 seek_back = min(4096, position)
-                f.seek(position - seek_back, os.SEEK_SET)
-                chunk = f.read(seek_back)
-                
-                # Scan length-prefixed chunks sequentially from left to right in this buffer
-                idx = 0
                 last_event_bytes = None
-                while idx <= len(chunk) - 4:
-                    size = int.from_bytes(chunk[idx:idx+4], byteorder='big')
-                    if idx + 4 + size <= len(chunk):
-                        last_event_bytes = chunk[idx+4 : idx+4+size]
-                        idx += 4 + size
-                    else:
-                        # Shift by 1 byte if alignment is lost, or break if end is reached
-                        idx += 1
+                
+                while not last_event_bytes:
+                    f.seek(position - seek_back, os.SEEK_SET)
+                    chunk = f.read(seek_back)
+                    
+                    # Scan length-prefixed chunks sequentially from left to right in this buffer
+                    idx = 0
+                    while idx <= len(chunk) - 4:
+                        size = int.from_bytes(chunk[idx:idx+4], byteorder='big')
+                        if idx + 4 + size <= len(chunk):
+                            last_event_bytes = chunk[idx+4 : idx+4+size]
+                            idx += 4 + size
+                        else:
+                            # Shift by 1 byte if alignment is lost
+                            idx += 1
+                            
+                    if last_event_bytes:
+                        break
+                        
+                    if seek_back == position:
+                        # Reached the beginning of the file and still found nothing
+                        break
+                        
+                    # Exponentially expand the read buffer backwards
+                    seek_back = min(seek_back * 2, position)
                 
                 if last_event_bytes:
                     event = main_data_pb2.Event.FromString(last_event_bytes)
