@@ -82,13 +82,12 @@ class LoggingUtils():
                 # Seek to end of file
                 f.seek(0, os.SEEK_END)
                 position = f.tell()
-                buffer_size = 1024
-                # Move backwards in chunks of 1KB
-                while position > 0:
-                    read_size = min(buffer_size, position)
-                    position -= read_size
-                    f.seek(position, os.SEEK_SET)
-                    chunk = f.read(read_size)
+                
+                # Seek back starting with 4KB, exponentially backoff up to the entire file
+                seek_back = min(4096, position)
+                while True:
+                    f.seek(position - seek_back, os.SEEK_SET)
+                    chunk = f.read(seek_back)
                     
                     # Split lines by binary newline
                     lines = chunk.split(b'\n')
@@ -98,8 +97,16 @@ class LoggingUtils():
                         if decoded and decoded.startswith("["):
                             last_line = decoded
                             break
+                            
                     if last_line:
                         break
+                        
+                    if seek_back == position:
+                        # Reached the beginning of the file and still found nothing
+                        break
+                        
+                    # Exponentially expand the read buffer backwards
+                    seek_back = min(seek_back * 2, position)
         except Exception as e:
             print(f"Error reading last record of {file_name}: {e}")
             return None
@@ -331,16 +338,19 @@ class Logger:
         current_date = datetime.datetime.now().date()
 
         if handler and handler.rollover == RolloverType.TIME:
-            last_record_date = LoggingUtils.get_date_last_record(handler.baseFilename)
+            last_record_date = getattr(handler, 'cached_last_date', None)
             current_date = last_record_date or current_date
+            
+        # Update handler cache for the new file
+        if handler:
+            handler.cached_last_date = datetime.datetime.now().date()
+            handler.rollover = RolloverType.NONE
         
         current_date_str = current_date.strftime("%Y-%m-%d")
         full_path_logs = os.path.join(path, self.__settings.get_backup_dir(), current_date_str)
         os.makedirs(full_path_logs, exist_ok=True)
         
         log_file_name = f"{base_name}_{current_date_str}{roration_ext}{ext}.gz"
-        if handler:
-            handler.rollover == RolloverType.NONE
         return os.path.join(full_path_logs, log_file_name)
 
     def __gzip_rotator(self, source, dest):
@@ -417,13 +427,16 @@ class SizedTimedRotatingFileHandler(RotatingFileHandler):
     def __init__(self, filename, mode='a', maxBytes=0, backupCount=0, encoding=None, delay=False):        
         super().__init__(filename, mode, maxBytes, backupCount, encoding, delay)
         self.rollover = RolloverType.NONE
+        self.cached_last_date = LoggingUtils.get_date_last_record(self.baseFilename)
 
     def shouldRollover(self, record):
         self.rollover = RolloverType.NONE
-        last_record_date = LoggingUtils.get_date_last_record(self.baseFilename)
         current_date = datetime.datetime.now().date()
+        
+        if self.cached_last_date is None:
+            self.cached_last_date = current_date
 
-        if last_record_date and current_date != last_record_date:
+        if current_date != self.cached_last_date:
             self.rollover = RolloverType.TIME
             return True
 
