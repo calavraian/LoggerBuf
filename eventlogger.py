@@ -240,8 +240,9 @@ class BackgroundEventWriter:
     def _process_queue(self):
         while not self.stop_event.is_set():
             try:
-                # Wait for event to arrive
-                data = self.queue.get(timeout=1.0)
+                # Wait for event to arrive, with a 10-minute heartbeat (600s)
+                # to ensure the thread wakes up periodically and checks the stop_event
+                data = self.queue.get(timeout=600.0)
                 if data is None:
                     self.queue.task_done()
                     break
