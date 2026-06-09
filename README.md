@@ -96,7 +96,17 @@ Statuses Breakdown:
 
 ### Exportar a JSON-Lines (JSONL) para bases de datos (ClickHouse, BigQuery, ELK)
 ```bash
-python3 decoder.py events/events_MAIN.log -o raw_events.jsonl --format jsonl
+python3 -m testlogger.decoder --input events/events_MAIN.log -o raw_events.jsonl --format jsonl
+```
+
+### Extraer Subconjuntos de Eventos (Memory Safe)
+Gracias a su diseño asíncrono con generadores y buffers circulares, puedes inspeccionar archivos inmensos (Gigabytes) sin colapsar la memoria RAM:
+```bash
+# Extraer solo los primeros 100 eventos
+python3 -m testlogger.decoder --input events/events_MAIN.log --head 100
+
+# Extraer solo los últimos 50 eventos (Seguro contra OOM, uso mínimo de RAM)
+python3 -m testlogger.decoder --input events/events_MAIN.log --tail 50
 ```
 
 ---
@@ -124,25 +134,28 @@ EVENT_QUEUE_STRATEGY = "lossless"  # Desborde: 'lossless' (bloqueo para no perde
 
 ## 📈 Rendimiento, Observabilidad & Benchmarks
 
-`LoggerBuf` no es una caja negra; incluye soporte nativo de **Observabilidad** que te permite extraer métricas precisas del comportamiento de las colas bajo carga en tiempo real:
+`LoggerBuf` no es una caja negra; incluye soporte nativo de **Observabilidad** que te permite extraer métricas precisas del comportamiento de las colas bajo carga en tiempo real. Utiliza el poderoso enum `MetricField` para garantizar cero errores de sintaxis y autocompletado en tu IDE:
 
 ```python
-metrics = telemetry.get_metrics()
-print(metrics)
+from testlogger.queue_metrics import MetricField
+
+# Solicitar métricas específicas en modo verboso humano (string)
+reporte = telemetry.get_metrics(
+    keys=[MetricField.TOTAL_DROPS, MetricField.PEAK_CAPACITY],
+    output_format="string",
+    verbose=True
+)
+print(reporte)
 ```
 *Salida:*
-```json
-{
-  "total_queued": 2001,
-  "total_processed": 2001,
-  "total_drops": 0,
-  "peak_size": 1999,
-  "empty_count": 1,
-  "avg_write_time_ms": 0.1230,
-  "min_write_time_ms": 0.0254,
-  "max_write_time_ms": 9.9463,
-  "total_drain_time_s": 0.2519
-}
+```text
+[Total Drops]
+  Valor: 0
+  Info:  Cumulative number of events dropped due to full queue (lossy strategy)
+
+[Peak Capacity (EPS)]
+  Valor: 8093.8
+  Info:  Theoretical maximum events per second based on current write speeds
 ```
 
 ### Resultados de Benchmarks bajo Concurrencia Extrema

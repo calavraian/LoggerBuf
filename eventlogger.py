@@ -5,6 +5,7 @@ import queue
 import threading
 import time
 import settings_globals as defaults
+from settings_globals import QueueStrategy
 
 from data_logs import main_data_pb2
 from queue_metrics import QueueMetrics, MetricField
@@ -80,7 +81,6 @@ class EventSettings:
 class BackgroundEventWriter:
     def __init__(self, settings: EventSettings):
         self.settings = settings
-        from settings_globals import QueueStrategy
         self.queue = queue.Queue(maxsize=getattr(defaults, 'EVENT_QUEUE_MAX_SIZE', 10000))
         self.strategy = getattr(defaults, 'EVENT_QUEUE_STRATEGY', QueueStrategy.LOSSLESS)
         self.stop_event = threading.Event()
