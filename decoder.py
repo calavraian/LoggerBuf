@@ -64,14 +64,37 @@ def main():
         action="store_true",
         help="Only display summary statistics (total counts, event types, statuses) instead of records."
     )
+    parser.add_argument(
+        "--head",
+        type=int,
+        help="Only output the first N events."
+    )
+    parser.add_argument(
+        "--tail",
+        type=int,
+        help="Only output the last N events. Reads the whole file but is memory-safe."
+    )
 
     args = parser.parse_args()
+
+    if args.head and args.tail:
+        print("Error: Cannot use both --head and --tail at the same time.", file=sys.stderr)
+        sys.exit(1)
 
     try:
         event_generator = LoggerBufDecoder.decode_file(args.input)
     except Exception as e:
         print(f"Error reading file: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # Apply limits efficiently
+    if args.head:
+        import itertools
+        event_generator = itertools.islice(event_generator, args.head)
+    elif args.tail:
+        import collections
+        # Consumes the entire generator but only keeps the last N in memory
+        event_generator = collections.deque(event_generator, maxlen=args.tail)
 
     total_events = 0
 
