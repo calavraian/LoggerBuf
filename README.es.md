@@ -27,18 +27,18 @@ A diferencia de los sistemas de logging tradicionales de texto plano, `LoggerBuf
 
 ### 1. Inicialización e Importación Básica
 
-El API expone dos constructores unificados de nivel superior: `get_debugger()` para logs de diagnóstico y `get_telemetry()` para eventos estructurados.
+El API expone dos constructores unificados de nivel superior: `create_debugger()` para logs de diagnóstico y `create_telemetry()` para eventos estructurados.
 
 ```python
 import loggerbuf
 from data_logs import main_data_pb2, event_status_pb2
 
 # 1. Obtener el depurador operativo (consola + archivo asíncrono)
-log = loggerbuf.get_debugger(name="MAIN_APP")
+log = loggerbuf.create_debugger(name="MAIN_APP")
 log.info("Iniciando la aplicación...")
 
 # 2. Obtener el registrador de telemetría estructurado
-telemetry = loggerbuf.get_telemetry()
+telemetry = loggerbuf.create_telemetry()
 ```
 
 ### 2. Registro de Logs de Diagnóstico (DebuggerLog)

@@ -1,0 +1,105 @@
+import pytest
+from telemetry import TelemetryLog, EventSettings
+from settings_globals import QueueStrategy
+from queue_metrics import MetricField
+from data_logs import main_data_pb2
+import time
+import os
+
+def test_telemetry_singleton_and_defaults():
+    # Test lines 276, 285-286
+    log1 = TelemetryLog()
+    log2 = TelemetryLog()
+    assert log1._TelemetryLog__settings.get_name() == log2._TelemetryLog__settings.get_name()
+    assert log1._TelemetryLog__writer is log2._TelemetryLog__writer
+
+def test_telemetry_lossy_strategy_and_queue_full(tmp_path):
+    settings = EventSettings(name=f"TEST_LOSSY_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    # Overwrite strategy and maxsize for testing queue full
+    writer = telemetry._TelemetryLog__writer
+    writer.strategy = QueueStrategy.LOSSY
+    writer.queue.maxsize = 2  # Very small queue
+    
+    # Fill queue to hit except queue.Full and record_drop
+    event = main_data_pb2.Event()
+    event.general_note = "Lossy Test"
+    
+    # Send enough to fill it quickly before the background thread can process them
+    # Actually wait, the background thread might process them.
+    # Let's pause the background thread or lock the file to stall it.
+    with writer.file_lock:
+        for _ in range(5):
+            telemetry.send(event)
+            
+    # Allow some time
+    time.sleep(0.1)
+    metrics = telemetry.get_metrics()
+    
+    # Verify we hit queue drops
+    assert metrics["total_drops"] > 0
+
+def test_telemetry_stop(tmp_path):
+    settings = EventSettings(name=f"TEST_STOP_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    writer = telemetry._TelemetryLog__writer
+    
+    writer.stop()
+    assert writer.stop_event.is_set()
+    assert not writer.worker_thread.is_alive()
+
+def test_telemetry_size_rotation_and_rollover(tmp_path):
+    settings = EventSettings(name=f"TEST_ROTATE_{tmp_path.name}", logs_base_dir=str(tmp_path), file_size=50) # Tiny file size
+    telemetry = TelemetryLog(settings)
+    
+    # Create large event to trigger size rotation
+    event = main_data_pb2.Event()
+    event.general_note = "A" * 100 
+    telemetry.send(event)
+    telemetry.send(event)
+    
+    writer = telemetry._TelemetryLog__writer
+    writer.queue.join()
+    time.sleep(0.1)
+    
+    history_dir = tmp_path / "events" / "history"
+    # One rollover should have happened
+    assert os.path.exists(history_dir)
+    assert len(list(history_dir.rglob("*.gz"))) > 0
+
+def test_telemetry_getframe_exception(tmp_path, mocker):
+    settings = EventSettings(name=f"TEST_FRAME_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    # Mock sys._getframe to raise Exception
+    import sys
+    mocker.patch.object(sys, '_getframe', side_effect=ValueError("Test Exception"))
+    
+    event = main_data_pb2.Event()
+    telemetry.send(event)
+    
+    writer = telemetry._TelemetryLog__writer
+    writer.queue.join()
+    time.sleep(0.1)
+    
+    # The event should have Unknown caller info, let's verify it didn't crash
+    # By checking the file
+    pass
+
+def test_telemetry_get_date_last_record(tmp_path):
+    settings = EventSettings(name=f"TEST_LAST_REC_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    event = main_data_pb2.Event()
+    telemetry.send(event)
+    
+    writer = telemetry._TelemetryLog__writer
+    writer.queue.join()
+    time.sleep(0.1)
+    
+    # Now simulate a new writer reading this existing file
+    from telemetry import BackgroundEventWriter
+    writer2 = BackgroundEventWriter(settings)
+    assert writer2._cached_last_date is not None
+    writer2.stop()

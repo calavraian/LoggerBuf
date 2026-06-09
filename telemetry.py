@@ -13,6 +13,7 @@ from queue_metrics import QueueMetrics, MetricField
 class EventSettings:
     def __init__(
             self,
+            name: str = defaults.EVENT_LOGGER_NAME,
             logs_base_dir: str = ".",
             backup_dir: str = defaults.EVENT_BACKUP_DIR,
             file_size = defaults.EVENT_FILE_SIZE,
@@ -22,6 +23,8 @@ class EventSettings:
 
         Parameters
         ----------
+        name : str, optional
+            Name of the logger. Defaults to defaults.EVENT_LOGGER_NAME.
         logs_base_dir : str, optional
             Base directory for events. Defaults to "." (current dir).
         backup_dir : str, optional
@@ -29,7 +32,7 @@ class EventSettings:
         file_size : int, optional
             Maximum size of each event file in bytes.
         """
-        self.__name = defaults.EVENT_LOGGER_NAME
+        self.__name = name
         self.__logs_base_dir = logs_base_dir
         self.__backup_dir = backup_dir
         self.__file_size = file_size
@@ -286,13 +289,9 @@ class TelemetryLog:
         # Extract caller information
         import sys
         try:
-            # Stack level 2 gets the caller of create_event or send
-            frame = sys._getframe(2)
+            # Stack level 1 gets the caller of create_event or send
+            frame = sys._getframe(1)
             
-            # Check if called via alias 'send', adjust frame level if so
-            if frame.f_code.co_name == 'send':
-                frame = sys._getframe(3)
-
             event.caller_file = os.path.basename(frame.f_code.co_filename)
             event.caller_function = frame.f_code.co_name
             event.lineno = frame.f_lineno

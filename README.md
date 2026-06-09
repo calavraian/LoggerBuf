@@ -27,18 +27,18 @@ Unlike traditional plain-text logging systems, `LoggerBuf` uses **Protocol Buffe
 
 ### 1. Initialization and Basic Import
 
-The API exposes two unified top-level constructors: `get_debugger()` for operational logs and `get_telemetry()` for structured events.
+The API exposes two unified top-level constructors: `create_debugger()` for operational logs and `create_telemetry()` for structured events.
 
 ```python
 import loggerbuf
 from data_logs import main_data_pb2, event_status_pb2
 
 # 1. Get the operational debugger (console + async file)
-log = loggerbuf.get_debugger(name="MAIN_APP")
+log = loggerbuf.create_debugger(name="MAIN_APP")
 log.info("Starting application...")
 
 # 2. Get the structured telemetry logger
-telemetry = loggerbuf.get_telemetry()
+telemetry = loggerbuf.create_telemetry()
 ```
 
 ### 2. Operational Diagnostic Logging (DebuggerLog)
