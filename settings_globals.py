@@ -4,7 +4,7 @@ class QueueStrategy(Enum):
     LOSSY = 1
     LOSSLESS = 2
 
-# Settings for debulogger
+# Settings for debugger
 LOGGING_BASE_DIR = "logs"
 LOGGING_BACKUP_DIR = "history"
 LOGGING_MAIN_FILE_NAME = "logs"
@@ -15,7 +15,7 @@ LOGGING_FILE_SIZE = 1024
 LOGGING_QUEUE_MAX_SIZE = 10000
 LOGGING_QUEUE_STRATEGY = QueueStrategy.LOSSY
 
-# Settings for eventlogger
+# Settings for telemetry
 EVENT_BASE_DIR = "events"
 EVENT_BACKUP_DIR = "history"
 EVENT_MAIN_FILE_NAME = "events"

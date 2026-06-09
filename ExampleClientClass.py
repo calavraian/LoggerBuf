@@ -1,19 +1,19 @@
 import time
 import threading
 from data_logs import main_data_pb2, event_status_pb2, event_example_pb2
-from debulogger import Logger, StreamLevel, LoggerSettings
-from eventlogger import EventLogger
+from debugger import DebuggerLog, StreamLevel, LoggerSettings
+from telemetry import TelemetryLog
 from decoder import LoggerBufDecoder
 
 class ExampleClientClass:
     def __init__(self):
         # Configure debug logger to output to both console and file
         loggerSettings = LoggerSettings(name='MAIN_LOGIC', stream=StreamLevel.FILE_CONSOLE)
-        self.logger = Logger(loggerSettings)
+        self.logger = DebuggerLog(loggerSettings)
         self.logger.setLoggerToDebug()
 
         # Initialize Event Logger (Telemetry)
-        self.eventLogger = EventLogger()
+        self.eventLogger = TelemetryLog()
 
     def run_basic_demo(self):
         """Demonstrates simple API usage."""

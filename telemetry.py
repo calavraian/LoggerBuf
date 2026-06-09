@@ -264,7 +264,7 @@ class BackgroundEventWriter:
         except Exception as e:
             print(f"Failed to compress and rollover telemetry file: {e}")
 
-class EventLogger:
+class TelemetryLog:
     __instances = {}
     __lock = threading.Lock()
 
@@ -272,15 +272,15 @@ class EventLogger:
         if not settings:
             settings = EventSettings()
             
-        with EventLogger.__lock:
+        with TelemetryLog.__lock:
             name = settings.get_name()
-            if name not in EventLogger.__instances:
+            if name not in TelemetryLog.__instances:
                 self.__settings = settings
                 self.__writer = BackgroundEventWriter(settings)
-                EventLogger.__instances[name] = (self.__settings, self.__writer)
+                TelemetryLog.__instances[name] = (self.__settings, self.__writer)
             else:
-                self.__settings = EventLogger.__instances[name][0]
-                self.__writer = EventLogger.__instances[name][1]
+                self.__settings = TelemetryLog.__instances[name][0]
+                self.__writer = TelemetryLog.__instances[name][1]
 
     def create_event(self, event: main_data_pb2.Event):
         # Extract caller information

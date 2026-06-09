@@ -1,5 +1,5 @@
-from .debulogger import Logger, LoggerSettings, StreamLevel, LogLevel
-from .eventlogger import EventLogger, EventSettings
+from .debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel
+from .telemetry import TelemetryLog, EventSettings
 from .decoder import LoggerBufDecoder
 
 def get_debugger(name="MAIN", stream=StreamLevel.FILE_CONSOLE, logs_base_dir="."):
@@ -16,11 +16,11 @@ def get_debugger(name="MAIN", stream=StreamLevel.FILE_CONSOLE, logs_base_dir="."
         Base directory to store operational logs.
     """
     settings = LoggerSettings(name=name, logs_base_dir=logs_base_dir, stream=stream)
-    return Logger(settings)
+    return DebuggerLog(settings)
 
 def get_telemetry(logs_base_dir="."):
     """
-    Helper function to get or create a structured Telemetry (EventLogger) instance.
+    Helper function to get or create a structured Telemetry instance.
     
     Parameters
     ----------
@@ -28,4 +28,4 @@ def get_telemetry(logs_base_dir="."):
         Base directory to store binary telemetry files.
     """
     settings = EventSettings(logs_base_dir=logs_base_dir)
-    return EventLogger(settings)
+    return TelemetryLog(settings)

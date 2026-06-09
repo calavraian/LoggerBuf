@@ -209,7 +209,7 @@ class LoggerSettings:
         """
         return self.__stream
 
-class Logger:
+class DebuggerLog:
     __loggers = {}
     __listeners = {}
     __log_format = '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
@@ -219,9 +219,9 @@ class Logger:
         if not settings:
             settings = LoggerSettings()
         
-        with Logger.__lock:
+        with DebuggerLog.__lock:
             name = settings.get_name()
-            if name not in Logger.__loggers:
+            if name not in DebuggerLog.__loggers:
                 self.__settings = settings
                 
                 # Retrieve configuration with safe defaults
@@ -266,10 +266,10 @@ class Logger:
                 listener = QueueListener(log_queue, *dest_handlers, respect_handler_level=True)
                 listener.start()
 
-                Logger.__loggers[name] = (self.__settings, logger, console_filter)
-                Logger.__listeners[name] = listener
+                DebuggerLog.__loggers[name] = (self.__settings, logger, console_filter)
+                DebuggerLog.__listeners[name] = listener
             else:
-                self.__settings = Logger.__loggers[name][0]
+                self.__settings = DebuggerLog.__loggers[name][0]
 
     def enable_console(self, allowed_classes: list = None, allowed_levels: list = None):
         """
@@ -277,9 +277,9 @@ class Logger:
         Optionally filters by a list of class names or log levels.
         """
         name = self.__settings.get_name()
-        if name in Logger.__loggers:
-            console_filter = Logger.__loggers[name][2]
-            with Logger.__lock:
+        if name in DebuggerLog.__loggers:
+            console_filter = DebuggerLog.__loggers[name][2]
+            with DebuggerLog.__lock:
                 console_filter.allowed_classes = allowed_classes
                 console_filter.allowed_levels = allowed_levels
                 console_filter.is_enabled = True
@@ -289,9 +289,9 @@ class Logger:
         Dynamically disables the console output.
         """
         name = self.__settings.get_name()
-        if name in Logger.__loggers:
-            console_filter = Logger.__loggers[name][2]
-            with Logger.__lock:
+        if name in DebuggerLog.__loggers:
+            console_filter = DebuggerLog.__loggers[name][2]
+            with DebuggerLog.__lock:
                 console_filter.is_enabled = False
 
     def resume_console(self):
@@ -299,9 +299,9 @@ class Logger:
         Resumes the console output using the previously configured filters.
         """
         name = self.__settings.get_name()
-        if name in Logger.__loggers:
-            console_filter = Logger.__loggers[name][2]
-            with Logger.__lock:
+        if name in DebuggerLog.__loggers:
+            console_filter = DebuggerLog.__loggers[name][2]
+            with DebuggerLog.__lock:
                 console_filter.is_enabled = True
 
 
@@ -315,7 +315,7 @@ class Logger:
         return self.__config_handler(handler=handler, logLevel=logging.DEBUG)
 
     def __config_handler(self, handler, logLevel, rotator=False):
-        log_formatter = logging.Formatter(Logger.__log_format, style='{')
+        log_formatter = logging.Formatter(DebuggerLog.__log_format, style='{')
         handler.setFormatter(log_formatter)
         handler.setLevel(logLevel)
         if rotator:
@@ -373,7 +373,7 @@ class Logger:
         return "None"
 
     def __get_logger(self):        
-        return Logger.__loggers[self.__settings.get_name()][1]
+        return DebuggerLog.__loggers[self.__settings.get_name()][1]
 
     def __log_message(self, level, message):
         extra = {"caller_class": self.__get_caller_class()}
@@ -381,8 +381,8 @@ class Logger:
     
     def __get_handler_rotating(self):
         name = self.__settings.get_name()
-        if name in Logger.__listeners:
-            listener = Logger.__listeners[name]
+        if name in DebuggerLog.__listeners:
+            listener = DebuggerLog.__listeners[name]
             for handler in listener.handlers:
                 if hasattr(handler, 'rollover') and handler.rollover != RolloverType.NONE:
                     return handler
@@ -404,7 +404,7 @@ class Logger:
         self.setLoggerToLevel(LogLevel.CRITICAL)
 
     def setLoggerToLevel(self, logLevel: LogLevel):
-        with Logger.__lock:
+        with DebuggerLog.__lock:
             self.__get_logger().setLevel(logLevel.value)
 
     def debug(self, message):
