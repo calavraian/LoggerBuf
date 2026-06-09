@@ -1,85 +1,87 @@
 # LoggerBuf 🚀
 
+🇺🇸 English | 🇪🇸 [Español](README.es.md)
+
 ### *Structured Telemetry & High-Performance Async Logger for Python*
 
-`LoggerBuf` es una biblioteca de logging híbrida y de alto rendimiento diseñada para resolver un problema clásico: **la separación limpia entre logs operativos de diagnóstico (debug) y eventos de telemetría de negocio estructurados**.
+`LoggerBuf` is a high-performance, hybrid logging library designed to solve a classic problem: **the clean separation between operational diagnostic logs (debug) and structured business telemetry events**.
 
-A diferencia de los sistemas de logging tradicionales de texto plano, `LoggerBuf` utiliza **Protocol Buffers (Protobuf)** para garantizar esquemas de datos estables y compactos en su canal de telemetría, almacenando la información en archivos binarios optimizados con rotación automática y compresión Gzip en segundo plano, sin interferir jamás con el rendimiento de la aplicación principal.
-
----
-
-## 🌟 Características Clave & Beneficios
-
-*   **⚡ Concurrencia Desacoplada de Alta Velocidad**: Implementa el patrón *Productor-Consumidor* utilizando una cola acotada en memoria y un hilo de fondo dedicado (*Daemon Worker Thread*). Los hilos de tu aplicación principal encolan logs y retornan en microsegundos (promedio de **0.004 ms**), absorbiendo por completo la latencia de escritura en disco.
-*   **🛡️ Estabilidad Garantizada (Flat Thread Pool)**: Se acabaron los hilos ad-hoc descontrolados. No importa si tu app atiende 10,000 peticiones concurrentes; `LoggerBuf` mantiene un control estricto de exactamente un solo hilo trabajador para escritura física por canal, protegiendo al sistema operativo contra el agotamiento de hilos (*Thread Exhaustion*).
-*   **📦 Telemetría Binaria Compacta (Length-Prefixed)**: Los eventos de telemetría se graban en disco en formato binario puro (Length-Prefixed Framing: cabecera de 4 bytes de longitud + bytes crudos del Protobuf). Esto ocupa una fracción del espacio de un JSON tradicional y evita cualquier riesgo de corrupción por caracteres especiales o saltos de línea (`0x0A`).
-*   **⚙️ Perfiles de Desborde Configurables**:
-    *   `LOSSLESS` (Modo Seguro - Telemetría): Bloquea brevemente si la cola está llena, garantizando que no se pierda un solo evento de analítica.
-    *   `LOSSY` (Modo Velocidad Extrema - Debug): Descarta silenciosamente los logs operativos más antiguos si la cola de disco está saturada, blindando el rendimiento de tu aplicación principal.
-*   **🔍 Contexto Nativo Ultra Rápido**: Captura el archivo, la línea, la función y la clase exacta que emite cada log a nivel de C (usando el framework nativo de logging de Python), eliminando el costoso stack walking manual con `inspect` que ralentiza las aplicaciones.
-*   **📊 Decodificador Asíncrono Offline (CLI)**: Incluye una potente herramienta de CLI que de forma automatizada y bajo demanda descomprime, valida, extrae métricas de rendimiento y exporta tus archivos binarios a formato JSON-Lines (JSONL) listo para ClickHouse, BigQuery o ElasticSearch.
+Unlike traditional plain-text logging systems, `LoggerBuf` uses **Protocol Buffers (Protobuf)** to guarantee stable and compact data schemas in its telemetry channel. Information is stored in optimized binary files with automatic background rotation and Gzip compression, never interfering with the main application's performance.
 
 ---
 
-## 🚀 Inicio Rápido
+## 🌟 Key Features & Benefits
 
-### 1. Inicialización e Importación Básica
+*   **⚡ High-Speed Decoupled Concurrency**: Implements the *Producer-Consumer* pattern using a bounded memory queue and a dedicated background thread (*Daemon Worker Thread*). Your main application threads enqueue logs and return in microseconds (average **0.004 ms**), completely absorbing disk write latency.
+*   **🛡️ Guaranteed Stability (Flat Thread Pool)**: No more runaway ad-hoc threads. Whether your app handles 10 or 10,000 concurrent requests, `LoggerBuf` maintains strict control of exactly one worker thread for physical writing per channel, protecting the OS against Thread Exhaustion.
+*   **📦 Compact Binary Telemetry (Length-Prefixed)**: Telemetry events are recorded on disk in pure binary format (Length-Prefixed Framing: 4-byte length header + raw Protobuf bytes). This occupies a fraction of the space of traditional JSON and avoids corruption risks from special characters or line breaks (`0x0A`).
+*   **⚙️ Configurable Overflow Profiles**:
+    *   `LOSSLESS` (Safe Mode - Telemetry): Briefly blocks if the queue is full, ensuring not a single analytics event is lost.
+    *   `LOSSY` (Extreme Speed Mode - Debug): Silently discards the oldest operational logs if the disk queue is saturated, shielding your main application's performance.
+*   **🔍 Ultra-Fast Native Context**: Captures the exact file, line, function, and class emitting each log at the C-level (using Python's native logging framework), eliminating the costly manual stack walking with `inspect` that slows down applications.
+*   **📊 Offline Async Decoder (CLI)**: Includes a powerful CLI tool that automates decompressing, validating, extracting performance metrics, and exporting your binary files to JSON-Lines (JSONL) format—ready for ClickHouse, BigQuery, or ElasticSearch.
 
-El API expone dos constructores unificados de nivel superior: `get_debugger()` para logs de diagnóstico y `get_telemetry()` para eventos estructurados.
+---
+
+## 🚀 Quick Start
+
+### 1. Initialization and Basic Import
+
+The API exposes two unified top-level constructors: `get_debugger()` for operational logs and `get_telemetry()` for structured events.
 
 ```python
 import loggerbuf
 from data_logs import main_data_pb2, event_status_pb2
 
-# 1. Obtener el depurador operativo (consola + archivo asíncrono)
+# 1. Get the operational debugger (console + async file)
 log = loggerbuf.get_debugger(name="MAIN_APP")
-log.info("Iniciando la aplicación...")
+log.info("Starting application...")
 
-# 2. Obtener el registrador de telemetría estructurado
+# 2. Get the structured telemetry logger
 telemetry = loggerbuf.get_telemetry()
 ```
 
-### 2. Registro de Logs de Diagnóstico (Debugger)
-El depurador soporta los niveles tradicionales de logging estándar (`debug`, `info`, `warning`, `error`, `critical`).
+### 2. Operational Diagnostic Logging (DebuggerLog)
+The debugger supports standard logging levels (`debug`, `info`, `warning`, `error`, `critical`).
 
 ```python
 class PaymentService:
     def process(self):
-        log.info("Procesando pago de usuario...")
+        log.info("Processing user payment...")
         try:
-            # ... lógica de negocio ...
-            log.debug("Conexión con pasarela establecida.")
+            # ... business logic ...
+            log.debug("Gateway connection established.")
         except Exception as e:
-            log.error(f"Fallo en transacción: {e}")
+            log.error(f"Transaction failed: {e}")
 ```
-*Salida formateada automáticamente en consola y archivo:*
-`[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Procesando pago de usuario...`
+*Automatically formatted output in console and file:*
+`[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Processing user payment...`
 
-### 3. Registro de Eventos Analíticos (Telemetry)
-Envía directamente tus mensajes estructurados de **Protobuf**.
+### 3. Analytical Event Logging (TelemetryLog)
+Send your structured **Protobuf** messages directly.
 
 ```python
-# Crear y rellenar tu mensaje Protobuf
+# Create and populate your Protobuf message
 event = main_data_pb2.Event()
 event.event_type = event_status_pb2.EventTypes.EVENT_DATA_BASE_PROCESSING
-event.general_note = "Usuario registrado exitosamente"
+event.general_note = "User successfully registered"
 event.status = event_status_pb2.Status.STATUS_COMPLETED
 
-# Encolado instantáneo no-bloqueante
+# Instant non-blocking enqueue
 telemetry.send(event)
 ```
 
 ---
 
-## 📊 CLI Decoder (Herramienta de Ingesta Offline)
+## 📊 CLI Decoder (Offline Ingestion Tool)
 
-Dado que los archivos de eventos analíticos se guardan en un formato binario extremadamente compacto y rotan automáticamente en archivos `.gz` comprimidos, `LoggerBuf` incluye un decodificador de línea de comandos para procesar los datos bajo demanda.
+Since analytical event files are saved in an extremely compact binary format and automatically rotate into compressed `.gz` files, `LoggerBuf` includes a command-line decoder to process data on demand.
 
-### Obtener Estadísticas y Métricas Rápidas
+### Quick Stats & Metrics
 ```bash
-python3 decoder.py events/history/2026-05-29/events_MAIN_2026-05-29.log.1.gz --stats
+python3 -m testlogger.decoder --input events/history/2026-05-29/events_MAIN_2026-05-29.log.1.gz --stats
 ```
-*Resultado:*
+*Output:*
 ```text
 === LoggerBuf Telemetry Statistics ===
 File: events/history/2026-05-29/events_MAIN_2026-05-29.log.1.gz
@@ -94,52 +96,52 @@ Statuses Breakdown:
   - EXAMPLE_EVENT_STATUS_STARTED: 340
 ```
 
-### Exportar a JSON-Lines (JSONL) para bases de datos (ClickHouse, BigQuery, ELK)
+### Export to JSON-Lines (JSONL) for Databases (ClickHouse, BigQuery, ELK)
 ```bash
 python3 -m testlogger.decoder --input events/events_MAIN.log -o raw_events.jsonl --format jsonl
 ```
 
-### Extraer Subconjuntos de Eventos (Memory Safe)
-Gracias a su diseño asíncrono con generadores y buffers circulares, puedes inspeccionar archivos inmensos (Gigabytes) sin colapsar la memoria RAM:
+### Extract Subsets of Events (Memory Safe)
+Thanks to its asynchronous design using generators and circular buffers, you can inspect immense files (Gigabytes) without collapsing RAM:
 ```bash
-# Extraer solo los primeros 100 eventos
+# Extract only the first 100 events
 python3 -m testlogger.decoder --input events/events_MAIN.log --head 100
 
-# Extraer solo los últimos 50 eventos (Seguro contra OOM, uso mínimo de RAM)
+# Extract only the last 50 events (OOM Safe, minimal RAM usage)
 python3 -m testlogger.decoder --input events/events_MAIN.log --tail 50
 ```
 
 ---
 
-## 🛠️ Configuración (`settings_globals.py`)
+## 🛠️ Configuration (`settings_globals.py`)
 
-Puedes personalizar las características físicas del logger y los buffers en `settings_globals.py`:
+You can customize the physical characteristics of the logger and buffers in `settings_globals.py`:
 
 ```python
-# Configuración del Debugger
-LOGGING_BASE_DIR = "logs"          # Carpeta raíz de logs operativos
-LOGGING_FILE_SIZE = 10485760       # Tamaño máximo por archivo (10 MB)
-LOGGING_BACKUP_COUNT = 5           # Cantidad de históricos a mantener
-LOGGING_QUEUE_MAX_SIZE = 10000     # Capacidad máxima del buffer en memoria
-LOGGING_QUEUE_STRATEGY = "lossy"   # Desborde: 'lossy' (descarte) o 'lossless' (bloqueo)
+# Debugger Configuration
+LOGGING_BASE_DIR = "logs"          # Root folder for operational logs
+LOGGING_FILE_SIZE = 10485760       # Max size per file (10 MB)
+LOGGING_BACKUP_COUNT = 5           # Number of historical files to keep
+LOGGING_QUEUE_MAX_SIZE = 10000     # Maximum memory buffer capacity
+LOGGING_QUEUE_STRATEGY = "lossy"   # Overflow: 'lossy' (discard) or 'lossless' (block)
 
-# Configuración de Telemetría (Events)
-EVENT_BASE_DIR = "events"          # Carpeta raíz de eventos binarios
-EVENT_FILE_SIZE = 52428800         # Tamaño máximo por archivo de evento (50 MB)
-EVENT_QUEUE_MAX_SIZE = 20000       # Capacidad máxima del buffer en memoria
-EVENT_QUEUE_STRATEGY = "lossless"  # Desborde: 'lossless' (bloqueo para no perder datos)
+# Telemetry Configuration
+EVENT_BASE_DIR = "events"          # Root folder for binary events
+EVENT_FILE_SIZE = 52428800         # Max size per event file (50 MB)
+EVENT_QUEUE_MAX_SIZE = 20000       # Maximum memory buffer capacity
+EVENT_QUEUE_STRATEGY = "lossless"  # Overflow: 'lossless' (block to prevent data loss)
 ```
 
 ---
 
-## 📈 Rendimiento, Observabilidad & Benchmarks
+## 📈 Performance, Observability & Benchmarks
 
-`LoggerBuf` no es una caja negra; incluye soporte nativo de **Observabilidad** que te permite extraer métricas precisas del comportamiento de las colas bajo carga en tiempo real. Utiliza el poderoso enum `MetricField` para garantizar cero errores de sintaxis y autocompletado en tu IDE:
+`LoggerBuf` is not a black box; it includes native support for **Observability** that allows you to extract precise metrics of queue behavior under load in real time. Use the powerful `MetricField` enum to guarantee zero syntax errors and IDE autocomplete:
 
 ```python
 from testlogger.queue_metrics import MetricField
 
-# Solicitar métricas específicas en modo verboso humano (string)
+# Request specific metrics in human-readable verbose string mode
 reporte = telemetry.get_metrics(
     keys=[MetricField.TOTAL_DROPS, MetricField.PEAK_CAPACITY],
     output_format="string",
@@ -147,7 +149,7 @@ reporte = telemetry.get_metrics(
 )
 print(reporte)
 ```
-*Salida:*
+*Output:*
 ```text
 [Total Drops]
   Valor: 0
@@ -158,11 +160,10 @@ print(reporte)
   Info:  Theoretical maximum events per second based on current write speeds
 ```
 
-### Resultados de Benchmarks bajo Concurrencia Extrema
+### Extreme Concurrency Benchmark Results
 
-En nuestras pruebas de estrés (lanzando múltiples hilos escribiendo ráfagas continuas de miles de datos concurrentes):
+In our stress tests (spawning multiple threads writing continuous bursts of thousands of concurrent data points):
 
-*   **Rendimiento del Hilo Cliente**: **0.0045 ms (4.5 microsegundos)** en promedio por llamada de log/evento, permitiendo que tu hilo de ejecución principal continúe al 100% de su velocidad de procesamiento sin bloqueos.
-*   **Estabilidad de Recursos**: Los hilos activos del proceso se mantienen planos y estables durante la ráfaga (exactamente 1 hilo trabajador de fondo por canal de disco), absorbiendo de forma asíncrona la escritura física sin picos de CPU ni sobrecargas.
-*   **Velocidad de Escritura Real**: El worker procesa y serializa eventos a disco físico a una velocidad promedio de **7,900 eventos por segundo**, requiriendo apenas el **19% de la cola disponible** ante ráfagas instantáneas extremas.
-
+*   **Client Thread Performance**: **0.0045 ms (4.5 microseconds)** average per log/event call, allowing your main execution thread to continue at 100% processing speed without blocking.
+*   **Resource Stability**: Active process threads remain flat and stable during the burst (exactly 1 background worker thread per disk channel), asynchronously absorbing physical writes without CPU spikes or overloads.
+*   **Real Write Speed**: The worker processes and serializes events to physical disk at an average speed of **7,900 events per second**, requiring only **19% of the available queue** during extreme instantaneous bursts.
