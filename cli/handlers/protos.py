@@ -3,6 +3,7 @@ import re
 import subprocess
 import glob
 from cli.utils import registry
+from cli.utils import schema_validator
 
 PROTO_DIR = "data_logs/protos"
 MAIN_PROTO = os.path.join(PROTO_DIR, "main_data.proto")
@@ -93,6 +94,15 @@ def build():
         f.write(main_proto_content)
         
     print(f"Reconstructed {MAIN_PROTO}")
+    
+    # Run Schema Linter / Validator
+    try:
+        schema_validator.validate_and_snapshot(PROTO_DIR)
+    except schema_validator.SchemaValidationError as e:
+        print(f"\n[!] BUILD ABORTED: {e}")
+        # We must exit with a non-zero code to stop the pipeline
+        import sys
+        sys.exit(1)
     
     # Call protoc
     cwd = os.getcwd()

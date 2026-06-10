@@ -3,6 +3,7 @@ import sys
 from cli.handlers import protos
 from cli.handlers import decode
 from cli.handlers import stress
+from cli.handlers import fields
 
 @click.group()
 def cli():
@@ -83,6 +84,29 @@ def deprecate_event(field_name):
     try:
         protos.deprecate_event(field_name)
         click.secho(f"Event '{field_name}' marked as deprecated successfully.", fg="yellow")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
+@cli.command()
+@click.argument('message_name')
+@click.argument('field_name')
+@click.argument('field_type')
+def add_subfield(message_name, field_name, field_type):
+    """Adds a new field to a specific proto message."""
+    try:
+        fields.add_subfield(message_name, field_name, field_type)
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
+@cli.command()
+@click.argument('message_name')
+@click.argument('field_name')
+def deprecate_subfield(message_name, field_name):
+    """Marks a specific field in a proto message as deprecated."""
+    try:
+        fields.deprecate_subfield(message_name, field_name)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
