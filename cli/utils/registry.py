@@ -1,0 +1,99 @@
+import json
+import hashlib
+import os
+
+REGISTRY_FILE = "data_logs/protos/.loggerbuf_registry.json"
+
+class RegistryCorruptedException(Exception):
+    pass
+
+def _calculate_hash(data: dict) -> str:
+    """Calcula el SHA256 determinista del diccionario."""
+    data_str = json.dumps(data, sort_keys=True)
+    return hashlib.sha256(data_str.encode('utf-8')).hexdigest()
+
+def get_registry() -> dict:
+    """Lee y valida el registry. Si no existe, lanza FileNotFoundError."""
+    if not os.path.exists(REGISTRY_FILE):
+        raise FileNotFoundError(f"Registry not found at {REGISTRY_FILE}. Please run 'loggerbuf init' first.")
+    
+    with open(REGISTRY_FILE, "r") as f:
+        content = json.load(f)
+        
+    if "hash" not in content or "data" not in content:
+        raise RegistryCorruptedException("Registry format is invalid.")
+        
+    expected_hash = _calculate_hash(content["data"])
+    if content["hash"] != expected_hash:
+        raise RegistryCorruptedException(
+            "CRITICAL: .loggerbuf_registry.json has been manually tampered with! "
+            "Hash validation failed. Please restore from backup or revert changes."
+        )
+    
+    return content["data"]
+
+def save_registry(data: dict):
+    """Guarda el registry de forma segura firmándolo con su hash."""
+    # Ensure directory exists
+    os.makedirs(os.path.dirname(REGISTRY_FILE), exist_ok=True)
+    
+    payload = {
+        "hash": _calculate_hash(data),
+        "data": data
+    }
+    with open(REGISTRY_FILE, "w") as f:
+        json.dump(payload, f, indent=2, sort_keys=True)
+
+def init_registry():
+    """Crea un registry inicial si no existe."""
+    if os.path.exists(REGISTRY_FILE):
+        return
+    initial_data = {
+        "next_index": 11,
+        "events": {}
+    }
+    save_registry(initial_data)
+
+def get_event(field_name: str) -> dict:
+    """Obtiene un evento específico del registry."""
+    data = get_registry()
+    return data["events"].get(field_name)
+
+def register_event(field_name: str, message_name: str, file_name: str) -> int:
+    """Registra un evento nuevo. Retorna el índice asignado."""
+    data = get_registry()
+    
+    if field_name in data["events"]:
+        raise ValueError(f"Event field '{field_name}' is already registered.")
+        
+    index = data["next_index"]
+    data["events"][field_name] = {
+        "message": message_name,
+        "file": file_name,
+        "index": index,
+        "deprecated": False
+    }
+    data["next_index"] += 1
+    
+    save_registry(data)
+    return index
+
+def deprecate_event(field_name: str):
+    """Marca un evento como deprecado."""
+    data = get_registry()
+    if field_name not in data["events"]:
+        raise ValueError(f"Event field '{field_name}' not found in registry.")
+        
+    data["events"][field_name]["deprecated"] = True
+    save_registry(data)
+
+def is_deprecated(field_name: str) -> bool:
+    """Chequea si un evento está deprecado sin lanzar excepción de tampering en runtime agresivamente o retornando False si no hay registry."""
+    try:
+        data = get_registry()
+        event = data["events"].get(field_name)
+        if event:
+            return event.get("deprecated", False)
+    except Exception:
+        pass
+    return False

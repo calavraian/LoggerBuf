@@ -1,0 +1,2 @@
+[console_scripts]
+loggerbuf = cli.console:cli
