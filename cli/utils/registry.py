@@ -8,12 +8,12 @@ class RegistryCorruptedException(Exception):
     pass
 
 def _calculate_hash(data: dict) -> str:
-    """Calcula el SHA256 determinista del diccionario."""
+    """Calculates the deterministic SHA256 of the dictionary."""
     data_str = json.dumps(data, sort_keys=True)
     return hashlib.sha256(data_str.encode('utf-8')).hexdigest()
 
 def get_registry() -> dict:
-    """Lee y valida el registry. Si no existe, lanza FileNotFoundError."""
+    """Reads and validates the registry. If it does not exist, raises FileNotFoundError."""
     if not os.path.exists(REGISTRY_FILE):
         raise FileNotFoundError(f"Registry not found at {REGISTRY_FILE}. Please run 'loggerbuf init' first.")
     
@@ -33,7 +33,7 @@ def get_registry() -> dict:
     return content["data"]
 
 def save_registry(data: dict):
-    """Guarda el registry de forma segura firmándolo con su hash."""
+    """Saves the registry securely by signing it with its hash."""
     # Ensure directory exists
     os.makedirs(os.path.dirname(REGISTRY_FILE), exist_ok=True)
     
@@ -45,7 +45,7 @@ def save_registry(data: dict):
         json.dump(payload, f, indent=2, sort_keys=True)
 
 def init_registry():
-    """Crea un registry inicial si no existe."""
+    """Creates an initial registry if it doesn't exist."""
     if os.path.exists(REGISTRY_FILE):
         return
     initial_data = {
@@ -55,12 +55,12 @@ def init_registry():
     save_registry(initial_data)
 
 def get_event(field_name: str) -> dict:
-    """Obtiene un evento específico del registry."""
+    """Gets a specific event from the registry."""
     data = get_registry()
     return data["events"].get(field_name)
 
 def register_event(field_name: str, message_name: str, file_name: str) -> int:
-    """Registra un evento nuevo. Retorna el índice asignado."""
+    """Registers a new event. Returns the assigned index."""
     data = get_registry()
     
     if field_name in data["events"]:
@@ -79,7 +79,7 @@ def register_event(field_name: str, message_name: str, file_name: str) -> int:
     return index
 
 def deprecate_event(field_name: str):
-    """Marca un evento como deprecado."""
+    """Marks an event as deprecated."""
     data = get_registry()
     if field_name not in data["events"]:
         raise ValueError(f"Event field '{field_name}' not found in registry.")
@@ -88,7 +88,7 @@ def deprecate_event(field_name: str):
     save_registry(data)
 
 def is_deprecated(field_name: str) -> bool:
-    """Chequea si un evento está deprecado sin lanzar excepción de tampering en runtime agresivamente o retornando False si no hay registry."""
+    """Checks if an event is deprecated without aggressively throwing a tampering exception at runtime, returning False if there's no registry."""
     try:
         data = get_registry()
         event = data["events"].get(field_name)
