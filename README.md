@@ -92,6 +92,24 @@ LOGGING_QUEUE_MAX_SIZE = 10000     # Memory queue capacity
 LOGGING_QUEUE_STRATEGY = "lossy"   # Overflow behavior
 ```
 
+## ⚙️ Advanced Settings & Hot Reload
+
+LoggerBuf can be globally configured via a `loggerbuf.json` file in your root directory. The easiest way to manage this is via the CLI.
+
+```bash
+loggerbuf config set LOGGING_FILE_SIZE 5000000
+```
+
+> [!TIP]
+> **Zero-Downtime Hot Reload**
+> When you change the `LOG_LEVEL` (e.g. `loggerbuf config set LOG_LEVEL DEBUG`), the underlying active LoggerBuf instances detect the change in the JSON file and will dynamically elevate your log level **without needing to restart the application**. Other structural changes (like file size) will require a manual restart.
+
+### Consolidated Telemetry
+For maximum I/O efficiency, LoggerBuf uses a single JSON file for all debug output (`debug_logs_MAIN.log`). You can easily explore it via:
+```bash
+loggerbuf decode-debug logs/history/debug_logs_MAIN.log --grep "Error" --tail 50
+```
+
 **2. Instance-Level Overrides**
 You can bypass global settings entirely when creating a logger:
 ```python
@@ -115,10 +133,11 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf create-event <Name>` | Scaffolds a new `.proto` file for a custom event. |
 | `loggerbuf register-event <Name>`| Links your custom event into the `main_data.proto` pipeline. |
 | `loggerbuf add-subfield ...` | Safely injects a new field into an existing event. |
-| `loggerbuf deprecate-subfield` | Safely deprecates a field without breaking historical data. |
 | `loggerbuf build` | Runs the Schema Linter and compiles `.proto` files to Python. |
+| `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
+| `loggerbuf config get <key>` | Retrieves the active value for a configuration key. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
-| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually in the terminal (supports `--grep`). |
+| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 
 ### 🛡️ Schema Evolution (The Golden Rules)
 Because telemetry is stored in binary, **never delete a field or change its data type**. 

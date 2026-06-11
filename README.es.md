@@ -86,10 +86,22 @@ Aunque el inicio de "Cero Configuración" es genial para arrancar rápido, los d
 
 **1. Por Defecto Globales (`settings_globals.py`)**
 Ajusta las restricciones centrales del motor:
-```python
-LOGGING_FILE_SIZE = 10485760       # Tamaño máximo por archivo (10 MB)
-LOGGING_QUEUE_MAX_SIZE = 10000     # Capacidad de la cola en memoria
-LOGGING_QUEUE_STRATEGY = "lossy"   # Comportamiento de desborde
+## 🎛️ Configuración Avanzada y Hot Reload
+
+LoggerBuf se puede configurar globalmente mediante el archivo `loggerbuf.json` en tu directorio raíz. La forma más fácil de administrarlo es con el CLI:
+
+```bash
+loggerbuf config set LOGGING_FILE_SIZE 5000000
+```
+
+> [!TIP]
+> **Hot Reload (Sin Reinicios)**
+> Al cambiar el nivel de los logs (`loggerbuf config set LOG_LEVEL DEBUG`), el hilo de vigilancia en memoria detectará el cambio y elevará dinámicamente tu verbosidad **sin necesidad de reiniciar tu aplicación**. Otros cambios estructurales (como el tamaño de rotación) sí requerirán un reinicio.
+
+### Telemetría Consolidada
+Para la máxima eficiencia I/O, LoggerBuf genera un único archivo JSON para su salida de debug (`debug_logs_MAIN.log`). El nivel de información en este archivo dependerá de tu `LOG_LEVEL`. Puedes explorarlo fácilmente:
+```bash
+loggerbuf decode-debug logs/history/debug_logs_MAIN.log --grep "Error" --tail 50
 ```
 
 **2. Sobrescritura por Instancia**
@@ -115,10 +127,11 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf create-event <Name>` | Crea una plantilla `.proto` para un nuevo evento. |
 | `loggerbuf register-event <Name>`| Vincula tu evento en el pipeline `main_data.proto`. |
 | `loggerbuf add-subfield ...` | Inyecta de forma segura un nuevo campo en un evento existente. |
-| `loggerbuf deprecate-subfield` | Depreca un campo de forma segura sin romper datos históricos. |
 | `loggerbuf build` | Ejecuta el Schema Linter y compila los `.proto` a Python. |
+| `loggerbuf config set <key> <value>` | Actualiza la configuración global. Ejemplo: `loggerbuf config set LOG_LEVEL DEBUG` |
+| `loggerbuf config get <key>` | Consulta un valor de configuración global. |
 | `loggerbuf decode-logs <File>` | Decodifica logs de telemetría binarios a la Terminal o a formato JSONL. |
-| `loggerbuf decode-debug <File>`| Explora logs de debug históricos (JSON) visualmente en la terminal (soporta `--grep`). |
+| `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
 
 ### 🛡️ Evolución de Esquemas (Las Reglas de Oro)
 Debido a que la telemetría se almacena en binario, **nunca debes eliminar un campo ni cambiar su tipo de dato**.
