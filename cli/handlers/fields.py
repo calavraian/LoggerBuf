@@ -54,6 +54,9 @@ def add_subfield(message_name: str, field_name: str, field_type: str, file_name:
                 
             # Only match fields at the main message level (brace_count == 1)
             if brace_count == 1:
+                if re.search(rf"\s+{field_name}\s*=", line):
+                    raise ValueError(f"Field '{field_name}' already exists in message '{message_name}'.")
+                    
                 match = re.search(r"=\s*(\d+)\s*;", line)
                 if match:
                     tag = int(match.group(1))
