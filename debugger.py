@@ -6,7 +6,9 @@ import os
 import queue
 import sys
 import threading
+import time
 import settings_globals as defaults
+from config import ConfigManager, CONFIG_FILE
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
@@ -244,16 +246,25 @@ class DebuggerLog:
             if name not in DebuggerLog.__loggers:
                 self.__settings = settings
                 
+                config_manager = ConfigManager()
+                
                 # Retrieve configuration with safe defaults
-                queue_max_size = getattr(defaults, 'LOGGING_QUEUE_MAX_SIZE', 10000)
+                queue_max_size = config_manager.get('LOGGING_QUEUE_MAX_SIZE', getattr(defaults, 'LOGGING_QUEUE_MAX_SIZE', 10000))
+                queue_strategy_val = config_manager.get('LOGGING_QUEUE_STRATEGY')
                 queue_strategy = getattr(defaults, 'LOGGING_QUEUE_STRATEGY', QueueStrategy.LOSSY)
+                if queue_strategy_val == "LOSSLESS":
+                    queue_strategy = QueueStrategy.LOSSLESS
+                elif queue_strategy_val == "LOSSY":
+                    queue_strategy = QueueStrategy.LOSSY
                 
                 full_path_logs = self.__full_path_logs()
-                log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_MAIN_FILE_NAME}_{name}.log")
-                debug_log_file = os.path.join(full_path_logs, f"{defaults.LOGGING_DEBUG_FILE_NAME}_{name}.log")
+                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get('LOGGING_DEBUG_FILE_NAME', defaults.LOGGING_DEBUG_FILE_NAME)}_{name}.log")
 
-                info_handler = self.__create_size_time_rotating_handler(filename=log_file, logLevel=logging.INFO)
-                debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=logging.DEBUG)
+                # Consolidated to single file
+                log_level_str = config_manager.get('LOG_LEVEL', 'DEBUG')
+                initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
+                
+                debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
                 stream_handler = self.__create_stream_handler()
 
                 # Initialize console filter based on settings
@@ -263,7 +274,6 @@ class DebuggerLog:
                 
                 dest_handlers = []
                 if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
-                    dest_handlers.append(info_handler)
                     dest_handlers.append(debug_handler)
 
                 # Always add stream_handler, output is controlled by ConsoleFilter
@@ -288,8 +298,44 @@ class DebuggerLog:
 
                 DebuggerLog.__loggers[name] = (self.__settings, logger, console_filter)
                 DebuggerLog.__listeners[name] = listener
+
+                # Start ConfigWatcherThread
+                self.__start_config_watcher()
             else:
                 self.__settings = DebuggerLog.__loggers[name][0]
+
+    def __start_config_watcher(self):
+        """Starts a daemon thread to watch loggerbuf.json for hot-reloading LOG_LEVEL."""
+        def watcher():
+            last_mtime = 0
+            while True:
+                try:
+                    if os.path.exists(CONFIG_FILE):
+                        mtime = os.path.getmtime(CONFIG_FILE)
+                        if mtime > last_mtime:
+                            last_mtime = mtime
+                            # Reload config
+                            config_manager = ConfigManager()
+                            config_manager.load()
+                            new_level_str = config_manager.get('LOG_LEVEL', 'DEBUG')
+                            new_level = getattr(logging, new_level_str.upper(), logging.DEBUG)
+                            
+                            # Update global logger level and file handler levels
+                            self.setLoggerToLevel(LogLevel(new_level))
+                            
+                            # Update the file handlers
+                            name = self.__settings.get_name()
+                            if name in DebuggerLog.__listeners:
+                                listener = DebuggerLog.__listeners[name]
+                                for handler in listener.handlers:
+                                    if isinstance(handler, SizedTimedRotatingFileHandler):
+                                        handler.setLevel(new_level)
+                except Exception as e:
+                    print(f"Error in ConfigWatcherThread: {e}")
+                time.sleep(5)
+                
+        watcher_thread = threading.Thread(target=watcher, daemon=True, name=f"ConfigWatcher_{self.__settings.get_name()}")
+        watcher_thread.start()
 
     def enable_console(self, allowed_classes: list = None, allowed_levels: list = None):
         """
@@ -428,7 +474,16 @@ class DebuggerLog:
 
     def setLoggerToLevel(self, logLevel: LogLevel):
         with DebuggerLog.__lock:
-            self.__get_logger().setLevel(logLevel.value)
+            logger = self.__get_logger()
+            logger.setLevel(logLevel.value)
+            
+            # Update the underlying handlers to respect the level
+            name = self.__settings.get_name()
+            if name in DebuggerLog.__listeners:
+                listener = DebuggerLog.__listeners[name]
+                for handler in listener.handlers:
+                    if isinstance(handler, SizedTimedRotatingFileHandler):
+                        handler.setLevel(logLevel.value)
 
     def debug(self, message):
         self.__log_message(logging.DEBUG, message)
