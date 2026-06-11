@@ -1,6 +1,6 @@
 from .debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel
 from .telemetry import TelemetryLog, EventSettings
-from .decoder import LoggerBufDecoder
+from .cli.handlers.decode import decode_file
 
 def create_debugger(name="MAIN", stream=StreamLevel.FILE_CONSOLE, logs_base_dir="."):
     """

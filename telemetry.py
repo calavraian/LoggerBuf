@@ -309,6 +309,28 @@ class TelemetryLog:
             
         event.logger_name = self.__settings.get_name()
         
+        # Check for deprecated fields
+        import warnings
+        
+        def _check_deprecated_fields(msg, prefix=""):
+            for field_descriptor, value in msg.ListFields():
+                field_path = f"{prefix}{field_descriptor.name}"
+                if field_descriptor.GetOptions().deprecated:
+                    warnings.warn(
+                        f"LoggerBuf: You are sending telemetry using a DEPRECATED field '{field_path}'. "
+                        f"This field is marked for removal in the schema. Please update your code.",
+                        DeprecationWarning,
+                        stacklevel=3
+                    )
+                if field_descriptor.type == field_descriptor.TYPE_MESSAGE:
+                    if field_descriptor.label == field_descriptor.LABEL_REPEATED:
+                        for idx, item in enumerate(value):
+                            _check_deprecated_fields(item, f"{field_path}[{idx}].")
+                    else:
+                        _check_deprecated_fields(value, f"{field_path}.")
+
+        _check_deprecated_fields(event)
+        
         self.__writer.write_event(event)
 
     # Alias to offer a cleaner telemetry API

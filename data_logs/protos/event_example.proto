@@ -20,4 +20,5 @@ message ExampleSubEvent {
     string description = 2;
     int64 counter = 3;
     OperationType operation_type = 4;
+    int32 new_metric = 5 [deprecated = true];
 }

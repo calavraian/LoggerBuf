@@ -1,0 +1,15 @@
+.DS_Store
+**/logs
+**/events
+venv
+__pycache__/
+*.pyc
+
+# Packaging & Build
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Testing
+.pytest_cache/

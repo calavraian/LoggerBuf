@@ -24,15 +24,17 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x65vent_example.proto\"\x93\x02\n\x0f\x45xampleSubEvent\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x0f\n\x07\x63ounter\x18\x03 \x01(\x03\x12\x36\n\x0eoperation_type\x18\x04 \x01(\x0e\x32\x1e.ExampleSubEvent.OperationType\"\x93\x01\n\rOperationType\x12\x19\n\x15OPERATION_UNSPECIFIED\x10\x00\x12\x17\n\x13OPERATION_DATA_READ\x10\x01\x12\x18\n\x14OPERATION_DATA_WRITE\x10\x02\x12\x19\n\x15OPERATION_DATA_UPDATE\x10\x03\x12\x19\n\x15OPERATION_DATA_DELETE\x10\x04\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x13\x65vent_example.proto\"\xab\x02\n\x0f\x45xampleSubEvent\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x02 \x01(\t\x12\x0f\n\x07\x63ounter\x18\x03 \x01(\x03\x12\x36\n\x0eoperation_type\x18\x04 \x01(\x0e\x32\x1e.ExampleSubEvent.OperationType\x12\x16\n\nnew_metric\x18\x05 \x01(\x05\x42\x02\x18\x01\"\x93\x01\n\rOperationType\x12\x19\n\x15OPERATION_UNSPECIFIED\x10\x00\x12\x17\n\x13OPERATION_DATA_READ\x10\x01\x12\x18\n\x14OPERATION_DATA_WRITE\x10\x02\x12\x19\n\x15OPERATION_DATA_UPDATE\x10\x03\x12\x19\n\x15OPERATION_DATA_DELETE\x10\x04\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'event_example_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
+  _globals['_EXAMPLESUBEVENT'].fields_by_name['new_metric']._loaded_options = None
+  _globals['_EXAMPLESUBEVENT'].fields_by_name['new_metric']._serialized_options = b'\030\001'
   _globals['_EXAMPLESUBEVENT']._serialized_start=24
-  _globals['_EXAMPLESUBEVENT']._serialized_end=299
-  _globals['_EXAMPLESUBEVENT_OPERATIONTYPE']._serialized_start=152
-  _globals['_EXAMPLESUBEVENT_OPERATIONTYPE']._serialized_end=299
+  _globals['_EXAMPLESUBEVENT']._serialized_end=323
+  _globals['_EXAMPLESUBEVENT_OPERATIONTYPE']._serialized_start=176
+  _globals['_EXAMPLESUBEVENT_OPERATIONTYPE']._serialized_end=323
 # @@protoc_insertion_point(module_scope)

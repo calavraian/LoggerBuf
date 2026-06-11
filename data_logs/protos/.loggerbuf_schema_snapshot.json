@@ -1,0 +1,71 @@
+{
+  "event_example.proto": {
+    "ExampleSubEvent": {
+      "fields": {
+        "1": {
+          "name": "name",
+          "type": 9
+        },
+        "2": {
+          "name": "description",
+          "type": 9
+        },
+        "3": {
+          "name": "counter",
+          "type": 3
+        },
+        "4": {
+          "name": "operation_type",
+          "type": 14
+        },
+        "5": {
+          "name": "new_metric",
+          "type": 5
+        }
+      }
+    }
+  },
+  "event_status.proto": {},
+  "main_data.proto": {
+    "Event": {
+      "fields": {
+        "1": {
+          "name": "event_type",
+          "type": 14
+        },
+        "10": {
+          "name": "lineno",
+          "type": 5
+        },
+        "2": {
+          "name": "timestamp",
+          "type": 9
+        },
+        "3": {
+          "name": "general_note",
+          "type": 9
+        },
+        "4": {
+          "name": "status",
+          "type": 14
+        },
+        "6": {
+          "name": "logger_name",
+          "type": 9
+        },
+        "7": {
+          "name": "caller_file",
+          "type": 9
+        },
+        "8": {
+          "name": "caller_class",
+          "type": 9
+        },
+        "9": {
+          "name": "caller_function",
+          "type": 9
+        }
+      }
+    }
+  }
+}
