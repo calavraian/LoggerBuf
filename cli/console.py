@@ -1,9 +1,11 @@
 import click
 import sys
+import threading
 from cli.handlers import protos
 from cli.handlers import decode
 from cli.handlers import stress
 from cli.handlers import fields
+from config import ConfigManager
 
 @click.group()
 def cli():
@@ -134,6 +136,46 @@ def decode_logs(input_file, output, format, stats, head, tail):
 def decode_debug(input_file, grep):
     """Explores historical JSON debug logs visually in the terminal."""
     decode.run_decode_debug(input_file, grep)
+
+@cli.group()
+def config():
+    """Manage LoggerBuf global configurations (loggerbuf.json)."""
+    pass
+
+@config.command()
+@click.argument('key')
+@click.argument('value')
+def set(key, value):
+    """Sets a configuration value in loggerbuf.json."""
+    config_manager = ConfigManager()
+    
+    # Try casting value to int or bool if applicable
+    if value.lower() in ('true', 'false'):
+        parsed_value = value.lower() == 'true'
+    elif value.isdigit():
+        parsed_value = int(value)
+    else:
+        parsed_value = value
+        
+    config_manager.set(key, parsed_value)
+    
+    click.echo(f"Saved: {key} = {parsed_value}")
+    
+    if key == "LOG_LEVEL":
+        click.secho("The ConfigWatcher will hot-reload this setting in ~5 seconds without restarting the app.", fg="green")
+    else:
+        click.secho(f"Warning: Modifying '{key}' requires manually restarting your application to take effect.", fg="yellow")
+
+@config.command()
+@click.argument('key')
+def get(key):
+    """Gets a configuration value from loggerbuf.json or default."""
+    config_manager = ConfigManager()
+    value = config_manager.get(key)
+    if value is not None:
+        click.echo(value)
+    else:
+        click.secho(f"Key '{key}' not found in config or defaults.", fg="red")
 
 @cli.command()
 @click.option('--threads', default=10, help="Number of concurrent threads.")
