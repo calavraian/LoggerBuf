@@ -6,6 +6,8 @@
 
 `LoggerBuf` is a high-performance, hybrid logging library designed to solve a classic problem: **the clean separation between operational diagnostic logs (debug) and structured business telemetry events**.
 
+Unlike traditional plain-text logging systems that choke under heavy loads and corrupt data, the native implementation of **Protocol Buffers** in `LoggerBuf` guarantees stable, compact, and ultra-fast data schemas. Your information is safely stored in optimized binary files with background automatic rotation and compression, ensuring zero interference with your main application's performance.
+
 ---
 
 ## 🤔 Why LoggerBuf? (The Problem & The Solution)
@@ -14,9 +16,9 @@
 Configuring Python's native `logging` module for production is notoriously complex. If you want asynchronous writing, automatic file rotation, and compression, you end up writing hundreds of lines of boilerplate. Worse, developers often mix operational errors ("Failed to connect to DB") with business analytics ("User completed purchase") in the same giant text files, making data extraction a nightmare.
 
 **The Solution:**
-`LoggerBuf` solves this by offering a zero-configuration, dual-channel architecture:
-1.  **Debugger**: For operational logs (human-readable text). It automatically injects the exact file, class, and line number into every log without slow `inspect` magic.
-2.  **Telemetry**: For business analytics. It uses binary Protocol Buffers to ensure your data is always structured, strongly typed, and ready for databases.
+`LoggerBuf` solves this by offering a dual-channel architecture that works out of the box, granting you "free" automatic context for superior tracking and debugging:
+1.  **Debugger**: For operational logs (human-readable text). It automatically injects the exact file, class, and line number into every log without the slow `inspect` magic.
+2.  **Telemetry**: For business analytics. It uses binary Protocol Buffers to ensure your data is always structured, strongly typed, and ready for massive database ingestion.
 
 **The "Superpower" (Zero-Setup):**
 With just two lines of code, you get an industrial-grade, non-blocking, auto-rotating logger:
@@ -24,7 +26,7 @@ With just two lines of code, you get an industrial-grade, non-blocking, auto-rot
 ```python
 import loggerbuf
 
-# Boom! You now have a fast, async, auto-rotating logger.
+# Boom! You now have a fast, async, auto-rotating logger with free context injection.
 log = loggerbuf.create_debugger(name="MAIN_APP")
 log.info("Application started safely.")
 ```
@@ -36,7 +38,7 @@ log.info("Application started safely.")
 *   **⚡ Async Background Thread**: Enqueuing a log takes an average of **0.004 ms**. A dedicated background worker handles the heavy lifting of writing to disk, ensuring your main application never blocks.
 *   **📦 Auto-Rotation & Compression**: Files automatically rotate when they hit a size limit (e.g., 10MB) and historical files are compressed using Gzip in the background to save disk space.
 *   **🛡️ Configurable Overflow Profiles**:
-    *   `LOSSLESS` (Telemetry): Briefly blocks if the queue is full, ensuring no analytics are lost.
+    *   `LOSSLESS` (Telemetry): Briefly blocks if the queue is full, ensuring not a single analytics event is lost.
     *   `LOSSY` (Debugger): Silently discards the oldest logs if the disk is saturated, protecting your app's performance during extreme log bursts.
 
 ---
@@ -44,7 +46,7 @@ log.info("Application started safely.")
 ## 💻 Operational Guide (In the Trenches)
 
 ### 1. Operational Diagnostic Logging (Debugger)
-Use the debugger for everyday application monitoring (`debug`, `info`, `warning`, `error`, `critical`).
+Use the debugger for everyday application monitoring (`debug`, `info`, `warning`, `error`, `critical`). 
 
 ```python
 class PaymentService:
@@ -55,11 +57,11 @@ class PaymentService:
         except Exception as e:
             log.error(f"Transaction failed: {e}")
 ```
-*Output automatically enriched with context:*
+*Notice the "Free Tracking Info" automatically enriched in the output:*
 `[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Processing user payment...`
 
 ### 2. Analytical Event Logging (Telemetry)
-Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventTypes` and `Status` enums to ensure consistency across your organization.
+Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventTypes` and `Status` enums to ensure consistency across your organization. Just like the debugger, Telemetry automatically injects creation timestamps and routing headers behind the scenes.
 
 ```python
 from data_logs import main_data_pb2, event_status_pb2
@@ -74,6 +76,31 @@ event.status = event_status_pb2.Status.STATUS_COMPLETED
 
 # Send it to the async binary queue
 telemetry.send(event)
+```
+
+---
+
+## 🎛️ Absolute Control (Advanced Configuration)
+
+While the "Zero-Setup" default is great for getting started, advanced developers need absolute control. `LoggerBuf` doesn't lock you in. You can heavily customize rotation sizes, memory queues, and paths globally or per-instance.
+
+**1. Global Defaults (`settings_globals.py`)**
+Adjust the engine's core constraints:
+```python
+LOGGING_FILE_SIZE = 10485760       # Max size per file (10 MB)
+LOGGING_QUEUE_MAX_SIZE = 10000     # Memory queue capacity
+LOGGING_QUEUE_STRATEGY = "lossy"   # Overflow behavior
+```
+
+**2. Instance-Level Overrides**
+You can bypass global settings entirely when creating a logger:
+```python
+# Create a specialized logger that rotates every 50MB and uses a lossless queue
+custom_log = loggerbuf.create_debugger(
+    name="CRITICAL_WORKER",
+    max_bytes=52428800,
+    queue_strategy="lossless"
+)
 ```
 
 ---
