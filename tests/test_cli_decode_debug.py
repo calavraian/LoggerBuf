@@ -77,5 +77,31 @@ class TestDecodeDebug(unittest.TestCase):
         self.assertNotIn("First message", output)
         self.assertIn("Failed to connect", output)
 
+    def test_run_decode_debug_head(self):
+        old_stdout = sys.stdout
+        sys.stdout = captured = StringIO()
+        
+        try:
+            run_decode_debug(self.test_log_file, head=1)
+        finally:
+            sys.stdout = old_stdout
+            
+        output = captured.getvalue()
+        self.assertIn("First message", output)
+        self.assertNotIn("Failed to connect", output)
+
+    def test_run_decode_debug_tail(self):
+        old_stdout = sys.stdout
+        sys.stdout = captured = StringIO()
+        
+        try:
+            run_decode_debug(self.test_log_file, tail=1)
+        finally:
+            sys.stdout = old_stdout
+            
+        output = captured.getvalue()
+        self.assertNotIn("First message", output)
+        self.assertIn("Failed to connect", output)
+
 if __name__ == "__main__":
     unittest.main()
