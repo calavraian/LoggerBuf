@@ -294,43 +294,25 @@ class DebuggerLog:
                 DebuggerLog.__loggers[name] = (self.__settings, logger, console_filter)
                 DebuggerLog.__listeners[name] = listener
 
-                # Start ConfigWatcherThread
-                self.__start_config_watcher()
+                # Subscribe to global ConfigWatcher for hot-reloading LOG_LEVEL
+                config_manager.subscribe('LOG_LEVEL', self._on_log_level_change)
             else:
                 self.__settings = DebuggerLog.__loggers[name][0]
 
-    def __start_config_watcher(self):
-        """Starts a daemon thread to watch loggerbuf.json for hot-reloading LOG_LEVEL."""
-        def watcher():
-            last_mtime = 0
-            while True:
-                try:
-                    if os.path.exists(CONFIG_FILE):
-                        mtime = os.path.getmtime(CONFIG_FILE)
-                        if mtime > last_mtime:
-                            last_mtime = mtime
-                            # Reload config
-                            config_manager = ConfigManager()
-                            config_manager.load()
-                            new_level_str = config_manager.get('LOG_LEVEL', 'DEBUG')
-                            new_level = getattr(logging, new_level_str.upper(), logging.DEBUG)
-                            
-                            # Update global logger level and file handler levels
-                            self.setLoggerToLevel(LogLevel(new_level))
-                            
-                            # Update the file handlers
-                            name = self.__settings.get_name()
-                            if name in DebuggerLog.__listeners:
-                                listener = DebuggerLog.__listeners[name]
-                                for handler in listener.handlers:
-                                    if isinstance(handler, SizedTimedRotatingFileHandler):
-                                        handler.setLevel(new_level)
-                except Exception as e:
-                    print(f"Error in ConfigWatcherThread: {e}")
-                time.sleep(5)
-                
-        watcher_thread = threading.Thread(target=watcher, daemon=True, name=f"ConfigWatcher_{self.__settings.get_name()}")
-        watcher_thread.start()
+    def _on_log_level_change(self, new_level_str):
+        """Called by ConfigManager when LOG_LEVEL changes."""
+        new_level = getattr(logging, str(new_level_str).upper(), logging.DEBUG)
+        
+        # Update global logger level and file handler levels
+        self.setLoggerToLevel(LogLevel(new_level))
+        
+        # Update the file handlers
+        name = self.__settings.get_name()
+        if name in DebuggerLog.__listeners:
+            listener = DebuggerLog.__listeners[name]
+            for handler in listener.handlers:
+                if isinstance(handler, SizedTimedRotatingFileHandler):
+                    handler.setLevel(new_level)
 
     def enable_console(self, allowed_classes: list = None, allowed_levels: list = None):
         """

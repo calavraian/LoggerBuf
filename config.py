@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+import time
 from enum import Enum
 
 class QueueStrategy(Enum):
@@ -39,7 +40,12 @@ class ConfigManager:
             if cls._instance is None:
                 cls._instance = super(ConfigManager, cls).__new__(cls)
                 cls._instance._config = {}
+                cls._instance._subscribers = {}
+                cls._instance._last_mtime = 0
+                cls._instance._watcher_thread = None
+                cls._instance._is_watching = False
                 cls._instance.load()
+                cls._instance._start_watcher()
             return cls._instance
 
     def load(self):
@@ -62,8 +68,12 @@ class ConfigManager:
         return default_value
 
     def set(self, key, value):
-        self._config[key] = value
-        self.save()
+        with self._lock:
+            old_value = self._config.get(key)
+            self._config[key] = value
+            self.save()
+            if old_value != value:
+                self._notify(key, value)
 
     def save(self):
         try:
@@ -71,3 +81,44 @@ class ConfigManager:
                 json.dump(self._config, f, indent=4)
         except Exception as e:
             print(f"Error saving {CONFIG_FILE}: {e}")
+
+    def subscribe(self, key, callback):
+        with self._lock:
+            if key not in self._subscribers:
+                self._subscribers[key] = []
+            if callback not in self._subscribers[key]:
+                self._subscribers[key].append(callback)
+
+    def _notify(self, key, new_value):
+        subscribers = self._subscribers.get(key, [])
+        for callback in subscribers:
+            try:
+                callback(new_value)
+            except Exception as e:
+                print(f"Error notifying subscriber for config {key}: {e}")
+
+    def _start_watcher(self):
+        if self._is_watching:
+            return
+        self._is_watching = True
+
+        def watcher():
+            while self._is_watching:
+                try:
+                    if os.path.exists(CONFIG_FILE):
+                        mtime = os.path.getmtime(CONFIG_FILE)
+                        if mtime > self._last_mtime:
+                            self._last_mtime = mtime
+                            with self._lock:
+                                old_config = dict(self._config)
+                                self.load()
+                                # Check what changed
+                                for key in self._config:
+                                    if old_config.get(key) != self._config[key]:
+                                        self._notify(key, self._config[key])
+                except Exception as e:
+                    pass
+                time.sleep(5)
+
+        self._watcher_thread = threading.Thread(target=watcher, daemon=True, name="ConfigWatcher_Global")
+        self._watcher_thread.start()
