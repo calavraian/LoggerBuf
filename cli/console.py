@@ -92,10 +92,11 @@ def deprecate_event(field_name):
 @click.argument('message_name')
 @click.argument('field_name')
 @click.argument('field_type')
-def add_subfield(message_name, field_name, field_type):
+@click.option('-f', '--file', help="Specify the .proto file name if the message exists in multiple files.")
+def add_subfield(message_name, field_name, field_type, file):
     """Adds a new field to a specific proto message."""
     try:
-        fields.add_subfield(message_name, field_name, field_type)
+        fields.add_subfield(message_name, field_name, field_type, file_name=file)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
@@ -103,10 +104,11 @@ def add_subfield(message_name, field_name, field_type):
 @cli.command()
 @click.argument('message_name')
 @click.argument('field_name')
-def deprecate_subfield(message_name, field_name):
+@click.option('-f', '--file', help="Specify the .proto file name if the message exists in multiple files.")
+def deprecate_subfield(message_name, field_name, file):
     """Marks a specific field in a proto message as deprecated."""
     try:
-        fields.deprecate_subfield(message_name, field_name)
+        fields.deprecate_subfield(message_name, field_name, file_name=file)
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)

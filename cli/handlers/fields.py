@@ -4,18 +4,33 @@ import re
 import sys
 from cli.handlers.protos import PROTO_DIR, build
 
-def _find_file_for_message(message_name: str) -> str:
+def _find_file_for_message(message_name: str, file_name: str = None) -> str:
+    if file_name:
+        path = os.path.join(PROTO_DIR, file_name)
+        if not os.path.exists(path):
+            raise FileNotFoundError(f"File '{file_name}' not found in {PROTO_DIR}.")
+        return path
+        
     files = glob.glob(os.path.join(PROTO_DIR, "*.proto"))
+    matches = []
+    
     for f in files:
         with open(f, "r") as file:
             content = file.read()
             if f"message {message_name} " in content or f"message {message_name}{{" in content or f"message {message_name}\n" in content:
-                return f
-    raise ValueError(f"Message '{message_name}' not found in any .proto file.")
+                matches.append(f)
+                
+    if len(matches) == 0:
+        raise ValueError(f"Message '{message_name}' not found in any .proto file.")
+    elif len(matches) > 1:
+        basenames = [os.path.basename(m) for m in matches]
+        raise ValueError(f"Found message '{message_name}' in multiple files: {basenames}. Please use --file to specify.")
+        
+    return matches[0]
 
-def add_subfield(message_name: str, field_name: str, field_type: str):
+def add_subfield(message_name: str, field_name: str, field_type: str, file_name: str = None):
     """Injects a new field into an existing proto message."""
-    target_file = _find_file_for_message(message_name)
+    target_file = _find_file_for_message(message_name, file_name)
     
     with open(target_file, "r") as f:
         lines = f.readlines()
@@ -59,9 +74,9 @@ def add_subfield(message_name: str, field_name: str, field_type: str):
     print(f"Added field '{field_name}' (Tag {new_tag}) to '{message_name}' in {os.path.basename(target_file)}.")
     build()
 
-def deprecate_subfield(message_name: str, field_name: str):
+def deprecate_subfield(message_name: str, field_name: str, file_name: str = None):
     """Marks a specific field in a sub-message as deprecated."""
-    target_file = _find_file_for_message(message_name)
+    target_file = _find_file_for_message(message_name, file_name)
     
     with open(target_file, "r") as f:
         lines = f.readlines()
