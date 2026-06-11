@@ -3,7 +3,7 @@ import time
 import os
 import logging
 from debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel, LoggingUtils
-import settings_globals as defaults
+import config as defaults
 
 def test_debugger_lossy_queue(tmp_path):
     # Cover lines 41-46
@@ -88,5 +88,6 @@ def test_debugger_rotation_coverage(tmp_path):
     history_dir = tmp_path / "events" / "history"
     # we don't strictly assert the history existence here because debugger uses different defaults for dir
     # wait, debugger default backup dir is "history", let's check log dir
-    backup_dir = tmp_path / defaults.LOGGING_BASE_DIR / settings.get_backup_dir()
+    from config import ConfigManager
+    backup_dir = tmp_path / ConfigManager().get('LOGGING_BASE_DIR') / settings.get_backup_dir()
     assert backup_dir.exists()

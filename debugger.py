@@ -7,8 +7,7 @@ import queue
 import sys
 import threading
 import time
-import settings_globals as defaults
-from config import ConfigManager, CONFIG_FILE
+from config import ConfigManager, CONFIG_FILE, QueueStrategy
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
@@ -30,7 +29,7 @@ class RolloverType(Enum):
     TIME = 1
     SIZE = 2
 
-from settings_globals import QueueStrategy
+from config import QueueStrategy
 
 class LoggerBufQueueHandler(QueueHandler):
     def __init__(self, queue_obj, strategy: QueueStrategy = QueueStrategy.LOSSY):
@@ -145,34 +144,27 @@ class LoggingUtils():
 
 
 class LoggerSettings:
-    def __init__(
-            self,
-            name: str = defaults.LOGGING_LOGGER_NAME,
-            logs_base_dir: str = ".",
-            backup_dir: str = defaults.LOGGING_BACKUP_DIR,
-            file_size = defaults.LOGGING_FILE_SIZE,
-            stream: StreamLevel = StreamLevel.ONLY_FILE,
-        ):
+    def __init__(self,
+            name: str = None,
+            logs_base_dir: str = ".", 
+            backup_dir: str = None,
+            file_size: int = None,
+            stream: StreamLevel = StreamLevel.ONLY_FILE):
         """
-        Constructor for LoggerSettings.
-
-        Parameters
-        ----------
-        name : str
-            Name of the logger.
-        logs_base_dir : str, optional
-            Base directory for logs. Defaults to "." (current dir).
-        backup_dir : str, optional
-            Directory for backup logs. Defaults to "history".
-        file_size : int, optional
-            Maximum size of each log file in bytes.
-        stream : StreamLevel, optional
-            Stream level for logging. Defaults to StreamLevel.ONLY_FILE.
+        Configuration for the logger.
+        
+        Args:
+            name (str, optional): Name of the logger. Defaults to None (will use default config).
+            logs_base_dir (str, optional): The base directory for all logs. Defaults to None (will use default config).
+            backup_dir (str, optional): The directory for rotated logs. Defaults to None (will use default config).
+            file_size (int, optional): The maximum file size in bytes before rotation. Defaults to None.
+            stream (StreamLevel, optional): Indicates if it should log to console. Defaults to ONLY_FILE.
         """
-        self.__name = name
-        self.__logs_base_dir = logs_base_dir
-        self.__backup_dir = backup_dir
-        self.__file_size = file_size
+        config = ConfigManager()
+        self.__name = name if name is not None else config.get('LOGGING_LOGGER_NAME')
+        self.__logs_base_dir = logs_base_dir 
+        self.__backup_dir = backup_dir if backup_dir is not None else config.get('LOGGING_BACKUP_DIR')
+        self.__file_size = file_size if file_size is not None else config.get('LOGGING_FILE_SIZE')
         self.__stream = stream
     
     def get_name(self):
@@ -249,19 +241,20 @@ class DebuggerLog:
                 config_manager = ConfigManager()
                 
                 # Retrieve configuration with safe defaults
-                queue_max_size = config_manager.get('LOGGING_QUEUE_MAX_SIZE', getattr(defaults, 'LOGGING_QUEUE_MAX_SIZE', 10000))
+                queue_max_size = config_manager.get('LOGGING_QUEUE_MAX_SIZE')
                 queue_strategy_val = config_manager.get('LOGGING_QUEUE_STRATEGY')
-                queue_strategy = getattr(defaults, 'LOGGING_QUEUE_STRATEGY', QueueStrategy.LOSSY)
+                queue_strategy = QueueStrategy.LOSSY
                 if queue_strategy_val == "LOSSLESS":
                     queue_strategy = QueueStrategy.LOSSLESS
                 elif queue_strategy_val == "LOSSY":
                     queue_strategy = QueueStrategy.LOSSY
                 
                 full_path_logs = self.__full_path_logs()
-                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get('LOGGING_DEBUG_FILE_NAME', defaults.LOGGING_DEBUG_FILE_NAME)}_{name}.log")
+                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get('LOGGING_DEBUG_FILE_NAME')}_{name}.log")
 
                 # Consolidated to single file
                 log_level_str = config_manager.get('LOG_LEVEL', 'DEBUG')
+                print("DEBUG: log_level_str in init is", log_level_str)
                 initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
                 
                 debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
@@ -280,6 +273,8 @@ class DebuggerLog:
                 dest_handlers.append(stream_handler)
 
                 # Initialize Queue
+                print("queue_max_size is", queue_max_size)
+
                 log_queue = queue.Queue(maxsize=queue_max_size)
                 
                 # Custom Queue Handler
@@ -373,7 +368,8 @@ class DebuggerLog:
 
 
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
-        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
+        config = ConfigManager()
+        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=config.get('LOGGING_BACKUP_COUNT'), maxBytes=self.__settings.get_file_size())
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True, is_json=True)
 
     def __create_stream_handler(self):
@@ -395,7 +391,8 @@ class DebuggerLog:
 
     def __full_path_logs(self):
         logs_base_dir = self.__settings.get_logs_base_dir() if self.__settings.get_logs_base_dir() != "." else os.getcwd()
-        full_path_logs = os.path.join(logs_base_dir, defaults.LOGGING_BASE_DIR)
+        config = ConfigManager()
+        full_path_logs = os.path.join(logs_base_dir, config.get('LOGGING_BASE_DIR'))
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 

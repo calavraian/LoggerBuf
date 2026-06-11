@@ -1,6 +1,6 @@
 import pytest
 from telemetry import TelemetryLog, EventSettings
-from settings_globals import QueueStrategy
+from config import QueueStrategy
 from queue_metrics import MetricField
 from data_logs import main_data_pb2
 import time
@@ -68,13 +68,12 @@ def test_telemetry_size_rotation_and_rollover(tmp_path):
     assert os.path.exists(history_dir)
     assert len(list(history_dir.rglob("*.gz"))) > 0
 
-def test_telemetry_getframe_exception(tmp_path, mocker):
+def test_telemetry_getframe_exception(tmp_path, monkeypatch):
     settings = EventSettings(name=f"TEST_FRAME_{tmp_path.name}", logs_base_dir=str(tmp_path))
     telemetry = TelemetryLog(settings)
     
-    # Mock sys._getframe to raise Exception
     import sys
-    mocker.patch.object(sys, '_getframe', side_effect=ValueError("Test Exception"))
+    monkeypatch.setattr(sys, '_getframe', lambda *args, **kwargs: (_ for _ in ()).throw(ValueError("Test Exception")))
     
     event = main_data_pb2.Event()
     telemetry.send(event)

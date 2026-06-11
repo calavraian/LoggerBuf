@@ -4,8 +4,7 @@ import os
 import queue
 import threading
 import time
-import settings_globals as defaults
-from settings_globals import QueueStrategy
+from config import ConfigManager, QueueStrategy
 
 from data_logs import main_data_pb2
 from queue_metrics import QueueMetrics, MetricField
@@ -13,10 +12,10 @@ from queue_metrics import QueueMetrics, MetricField
 class EventSettings:
     def __init__(
             self,
-            name: str = defaults.EVENT_LOGGER_NAME,
+            name: str = None,
             logs_base_dir: str = ".",
-            backup_dir: str = defaults.EVENT_BACKUP_DIR,
-            file_size = defaults.EVENT_FILE_SIZE,
+            backup_dir: str = None,
+            file_size: int = None,
         ):
         """
         Constructor for EventSettings.
@@ -32,10 +31,11 @@ class EventSettings:
         file_size : int, optional
             Maximum size of each event file in bytes.
         """
-        self.__name = name
+        config = ConfigManager()
+        self.__name = name if name is not None else config.get('EVENT_LOGGER_NAME')
         self.__logs_base_dir = logs_base_dir
-        self.__backup_dir = backup_dir
-        self.__file_size = file_size
+        self.__backup_dir = backup_dir if backup_dir is not None else config.get('EVENT_BACKUP_DIR')
+        self.__file_size = file_size if file_size is not None else config.get('EVENT_FILE_SIZE')
     
     def get_name(self):
         """
@@ -83,17 +83,23 @@ class EventSettings:
 
 class BackgroundEventWriter:
     def __init__(self, settings: EventSettings):
+        config = ConfigManager()
         self.settings = settings
-        self.queue = queue.Queue(maxsize=getattr(defaults, 'EVENT_QUEUE_MAX_SIZE', 10000))
-        self.strategy = getattr(defaults, 'EVENT_QUEUE_STRATEGY', QueueStrategy.LOSSLESS)
+        self.queue = queue.Queue(maxsize=config.get('EVENT_QUEUE_MAX_SIZE'))
+        queue_strategy_val = config.get('EVENT_QUEUE_STRATEGY')
+        self.strategy = QueueStrategy.LOSSLESS
+        if queue_strategy_val == "LOSSY":
+            self.strategy = QueueStrategy.LOSSY
+        elif queue_strategy_val == "LOSSLESS":
+            self.strategy = QueueStrategy.LOSSLESS
         self.stop_event = threading.Event()
         
         # In-memory Metrics Collector
         self.metrics = QueueMetrics()
         
-        # Track active file
         self.full_path_logs = self._get_full_path_logs()
-        self.current_filename = os.path.join(self.full_path_logs, f"{defaults.EVENT_MAIN_FILE_NAME}_{self.settings.get_name()}.log")
+        config = ConfigManager()
+        self.current_filename = os.path.join(self.full_path_logs, f"{config.get('EVENT_MAIN_FILE_NAME')}_{self.settings.get_name()}.log")
         
         self.file_lock = threading.Lock()
         self._file = None
@@ -107,7 +113,8 @@ class BackgroundEventWriter:
 
     def _get_full_path_logs(self):
         logs_base_dir = self.settings.get_logs_base_dir() if self.settings.get_logs_base_dir() != "." else os.getcwd()
-        full_path_logs = os.path.join(logs_base_dir, defaults.EVENT_BASE_DIR)
+        config = ConfigManager()
+        full_path_logs = os.path.join(logs_base_dir, config.get('EVENT_BASE_DIR'))
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 
@@ -248,8 +255,8 @@ class BackgroundEventWriter:
         current_date_str = (last_date or current_date).strftime("%Y-%m-%d")
         backup_subdir = os.path.join(self.full_path_logs, self.settings.get_backup_dir(), current_date_str)
         os.makedirs(backup_subdir, exist_ok=True)
-        
-        base_name = f"{defaults.EVENT_MAIN_FILE_NAME}_{self.settings.get_name()}"
+        config = ConfigManager()
+        base_name = f"{config.get('EVENT_MAIN_FILE_NAME')}_{self.settings.get_name()}"
         
         index = 1
         while True:

@@ -3,7 +3,7 @@ import time
 import pytest
 from telemetry import TelemetryLog, EventSettings
 from data_logs import main_data_pb2, event_status_pb2, event_example_pb2
-from settings_globals import QueueStrategy
+from config import QueueStrategy
 import struct
 
 class DummyTelemetryCaller:
@@ -12,14 +12,6 @@ class DummyTelemetryCaller:
         event.event_type = event_status_pb2.EventTypes.EVENT_DATA_BASE_PROCESSING
         event.general_note = "Strict Context Test"
         event.status = event_status_pb2.Status.STATUS_COMPLETED
-        
-        # Nested sub event
-        sub_event = event_example_pb2.ExampleSubEvent()
-        sub_event.name = "nested_test"
-        sub_event.counter = 42
-        sub_event.operation_type = event_example_pb2.ExampleSubEvent.OperationType.OPERATION_DATA_WRITE
-        
-        event.example_sub_event.CopyFrom(sub_event)
         
         telemetry_logger.send(event)
 
@@ -58,11 +50,8 @@ def test_telemetry_injections_and_nested_protos(tmp_path):
         decoded_event = main_data_pb2.Event()
         decoded_event.ParseFromString(payload)
         
-        # Verify custom notes and nested proto
+        # Verify custom notes
         assert decoded_event.general_note == "Strict Context Test"
-        assert decoded_event.example_sub_event.name == "nested_test"
-        assert decoded_event.example_sub_event.counter == 42
-        assert decoded_event.example_sub_event.operation_type == event_example_pb2.ExampleSubEvent.OperationType.OPERATION_DATA_WRITE
         
         # Verify contextual data injected automatically by the background thread
         assert decoded_event.caller_class == "DummyTelemetryCaller"

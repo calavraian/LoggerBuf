@@ -1,9 +1,34 @@
 import json
 import os
 import threading
-import settings_globals as defaults
+from enum import Enum
+
+class QueueStrategy(Enum):
+    LOSSY = 1
+    LOSSLESS = 2
 
 CONFIG_FILE = "loggerbuf.json"
+
+DEFAULT_CONFIG = {
+    "LOG_LEVEL": "DEBUG",
+    "LOGGING_BASE_DIR": "logs",
+    "LOGGING_BACKUP_DIR": "history",
+    "LOGGING_MAIN_FILE_NAME": "logs",
+    "LOGGING_DEBUG_FILE_NAME": "debug_logs",
+    "LOGGING_BACKUP_COUNT": 5,
+    "LOGGING_LOGGER_NAME": "MAIN",
+    "LOGGING_FILE_SIZE": 1024,
+    "LOGGING_QUEUE_MAX_SIZE": 10000,
+    "LOGGING_QUEUE_STRATEGY": "LOSSY",
+    "EVENT_BASE_DIR": "events",
+    "EVENT_BACKUP_DIR": "history",
+    "EVENT_MAIN_FILE_NAME": "events",
+    "EVENT_BACKUP_COUNT": 5,
+    "EVENT_LOGGER_NAME": "MAIN",
+    "EVENT_FILE_SIZE": 1024,
+    "EVENT_QUEUE_MAX_SIZE": 10000,
+    "EVENT_QUEUE_STRATEGY": "LOSSLESS"
+}
 
 class ConfigManager:
     _instance = None
@@ -24,14 +49,17 @@ class ConfigManager:
                     self._config = json.load(f)
             except Exception as e:
                 print(f"Error loading {CONFIG_FILE}: {e}")
-                self._config = {}
+                self._config = DEFAULT_CONFIG.copy()
         else:
-            self._config = {}
+            self._config = DEFAULT_CONFIG.copy()
+            self.save()  # Generate default file on first run
 
     def get(self, key, default_value=None):
         if key in self._config:
             return self._config[key]
-        return getattr(defaults, key, default_value)
+        if key in DEFAULT_CONFIG:
+            return DEFAULT_CONFIG[key]
+        return default_value
 
     def set(self, key, value):
         self._config[key] = value

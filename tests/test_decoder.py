@@ -5,7 +5,7 @@ import struct
 import pytest
 from telemetry import TelemetryLog, EventSettings
 from data_logs import main_data_pb2
-from decoder import LoggerBufDecoder
+from cli.handlers.decode import decode_file
 import subprocess
 import sys
 
@@ -33,7 +33,7 @@ def sample_telemetry_file(tmp_path):
     return str(event_files[0])
 
 def test_decoder_yield_vs_list(sample_telemetry_file):
-    generator = LoggerBufDecoder.decode_file(sample_telemetry_file)
+    generator = decode_file(sample_telemetry_file)
     import types
     assert isinstance(generator, types.GeneratorType), "Decoder should yield, not return a list"
     
@@ -47,7 +47,7 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
     
     # Execute CLI
     cmd = [
-        sys.executable, "decoder.py",
+        sys.executable, "-m", "cli.console", "decode-logs",
         sample_telemetry_file,
         "--output", str(output_file),
         "--format", "jsonl"
@@ -67,7 +67,7 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
 def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     # Head 2
     cmd_head = [
-        sys.executable, "decoder.py",
+        sys.executable, "-m", "cli.console", "decode-logs",
         sample_telemetry_file,
         "--head", "2",
         "--format", "jsonl"
@@ -80,7 +80,7 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     
     # Tail 2
     cmd_tail = [
-        sys.executable, "decoder.py",
+        sys.executable, "-m", "cli.console", "decode-logs",
         sample_telemetry_file,
         "--tail", "2",
         "--format", "jsonl"
@@ -93,7 +93,7 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
 
 def test_decoder_cli_stats(sample_telemetry_file):
     cmd_stats = [
-        sys.executable, "decoder.py",
+        sys.executable, "-m", "cli.console", "decode-logs",
         sample_telemetry_file,
         "--stats"
     ]
