@@ -133,9 +133,11 @@ def decode_logs(input_file, output, format, stats, head, tail):
 @cli.command()
 @click.argument('input_file')
 @click.option('--grep', help="Filter logs by keyword (case-insensitive).")
-def decode_debug(input_file, grep):
+@click.option('--head', type=int, help="Show only the first N logs.")
+@click.option('--tail', type=int, help="Show only the last N logs.")
+def decode_debug(input_file, grep, head, tail):
     """Explores historical JSON debug logs visually in the terminal."""
-    decode.run_decode_debug(input_file, grep)
+    decode.run_decode_debug(input_file, grep, head, tail)
 
 @cli.group()
 def config():

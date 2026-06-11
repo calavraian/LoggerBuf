@@ -106,6 +106,9 @@ def run_decode(input_file: str, output_file: str, format: str, stats: bool, head
             print(f"Successfully decoded {total_events} events and exported to {output_file}")
 
 
+import collections
+import itertools
+
 def decode_debug_file(filepath):
     """
     Reads a jsonl log file (raw or gzipped) and yields parsed JSON objects.
@@ -125,7 +128,7 @@ def decode_debug_file(filepath):
             except json.JSONDecodeError as e:
                 print(f"Warning: Failed to decode JSON at {filepath}:{line_num}: {e}", file=sys.stderr)
 
-def run_decode_debug(input_file: str, grep_keyword: str = None):
+def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None, tail: int = None):
     # Warning if it is the base file without rotation ext
     basename = os.path.basename(input_file)
     if basename.endswith(".log") and not re.search(r'\d{4}-\d{2}-\d{2}', basename):
@@ -143,9 +146,15 @@ def run_decode_debug(input_file: str, grep_keyword: str = None):
     
     grep_lower = grep_keyword.lower() if grep_keyword else None
 
+    if tail is not None and tail > 0:
+        log_generator = collections.deque(log_generator, maxlen=tail)
+
     # Original visual format: '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
     try:
         for log_obj in log_generator:
+            if head is not None and matched_logs >= head:
+                break
+                
             total_logs += 1
             
             timestamp = log_obj.get("timestamp", "Unknown")
