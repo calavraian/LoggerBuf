@@ -2,6 +2,7 @@ import sys
 import os
 import gzip
 import json
+import re
 from google.protobuf.json_format import MessageToDict
 
 try:
@@ -103,3 +104,71 @@ def run_decode(input_file: str, output_file: str, format: str, stats: bool, head
         if output_file:
             out_f.close()
             print(f"Successfully decoded {total_events} events and exported to {output_file}")
+
+
+def decode_debug_file(filepath):
+    """
+    Reads a jsonl log file (raw or gzipped) and yields parsed JSON objects.
+    """
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"File not found: {filepath}")
+
+    open_func = gzip.open if filepath.endswith('.gz') else open
+    
+    with open_func(filepath, 'rt', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError as e:
+                print(f"Warning: Failed to decode JSON at {filepath}:{line_num}: {e}", file=sys.stderr)
+
+def run_decode_debug(input_file: str, grep_keyword: str = None):
+    # Warning if it is the base file without rotation ext
+    basename = os.path.basename(input_file)
+    if basename.endswith(".log") and not re.search(r'\d{4}-\d{2}-\d{2}', basename):
+        print(f"\nWarning: You are decoding what appears to be the live active file '{basename}'. "
+              f"Some final bytes might be incomplete if written concurrently.\n", file=sys.stderr)
+
+    try:
+        log_generator = decode_debug_file(input_file)
+    except Exception as e:
+        print(f"Error reading file: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    total_logs = 0
+    matched_logs = 0
+    
+    grep_lower = grep_keyword.lower() if grep_keyword else None
+
+    # Original visual format: '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
+    try:
+        for log_obj in log_generator:
+            total_logs += 1
+            
+            timestamp = log_obj.get("timestamp", "Unknown")
+            logger_name = log_obj.get("logger", "Unknown")
+            filename = log_obj.get("file", "Unknown")
+            caller_class = log_obj.get("class", "None")
+            func_name = log_obj.get("function", "Unknown")
+            lineno = log_obj.get("line", 0)
+            level = log_obj.get("level", "UNKNOWN")
+            message = log_obj.get("message", "")
+            
+            formatted_msg = f"[{timestamp}] >>{logger_name}<< ({filename}::{caller_class}::{func_name}->{lineno}) - *{level}* - message::>{message}"
+            
+            if grep_lower:
+                if grep_lower not in formatted_msg.lower():
+                    continue
+            
+            matched_logs += 1
+            print(formatted_msg)
+            
+    except Exception as e:
+        print(f"Error decoding debug logs: {e}", file=sys.stderr)
+    finally:
+        if grep_keyword:
+            print(f"--- Filtered {matched_logs} matches out of {total_logs} total logs in {input_file} ---", file=sys.stderr)
+

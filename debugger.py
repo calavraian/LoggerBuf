@@ -1,5 +1,6 @@
 import datetime
 import gzip
+import json
 import logging
 import os
 import queue
@@ -70,6 +71,21 @@ class ConsoleFilter(logging.Filter):
 
 
 
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_obj = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "logger": record.name,
+            "level": record.levelname,
+            "file": getattr(record, "filename", "Unknown"),
+            "class": getattr(record, "caller_class", "None"),
+            "function": getattr(record, "funcName", "Unknown"),
+            "line": getattr(record, "lineno", 0),
+            "message": record.getMessage()
+        }
+        return json.dumps(log_obj, ensure_ascii=False)
+
+
 class LoggingUtils():
     @staticmethod
     def get_date_last_record(file_name):
@@ -91,10 +107,10 @@ class LoggingUtils():
                     
                     # Split lines by binary newline
                     lines = chunk.split(b'\n')
-                    # Find the last non-empty line starting with '[' (log bracket)
+                    # Find the last non-empty line starting with '[' (old text log) or '{' (json log)
                     for line in reversed(lines):
                         decoded = line.strip().decode('utf-8', errors='ignore')
-                        if decoded and decoded.startswith("["):
+                        if decoded and (decoded.startswith("[") or decoded.startswith("{")):
                             last_line = decoded
                             break
                             
@@ -115,7 +131,11 @@ class LoggingUtils():
             return None
             
         try:
-            date_str = last_line[1:11]
+            if last_line.startswith("{"):
+                data = json.loads(last_line)
+                date_str = data.get("timestamp", "")[:10]
+            else:
+                date_str = last_line[1:11]
             return datetime.datetime.strptime(date_str, "%Y-%m-%d").date()
         except Exception:
             return None
@@ -308,14 +328,17 @@ class DebuggerLog:
 
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
         handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=defaults.LOGGING_BACKUP_COUNT, maxBytes=self.__settings.get_file_size())
-        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True)
+        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True, is_json=True)
 
     def __create_stream_handler(self):
         handler = logging.StreamHandler()
-        return self.__config_handler(handler=handler, logLevel=logging.DEBUG)
+        return self.__config_handler(handler=handler, logLevel=logging.DEBUG, rotator=False, is_json=False)
 
-    def __config_handler(self, handler, logLevel, rotator=False):
-        log_formatter = logging.Formatter(DebuggerLog.__log_format, style='{')
+    def __config_handler(self, handler, logLevel, rotator=False, is_json=False):
+        if is_json:
+            log_formatter = JsonFormatter()
+        else:
+            log_formatter = logging.Formatter(DebuggerLog.__log_format, style='{')
         handler.setFormatter(log_formatter)
         handler.setLevel(logLevel)
         if rotator:

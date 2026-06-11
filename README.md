@@ -117,7 +117,8 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf add-subfield ...` | Safely injects a new field into an existing event. |
 | `loggerbuf deprecate-subfield` | Safely deprecates a field without breaking historical data. |
 | `loggerbuf build` | Runs the Schema Linter and compiles `.proto` files to Python. |
-| `loggerbuf decode-logs <File>` | Decodes binary logs to Terminal or JSONL. |
+| `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
+| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually in the terminal (supports `--grep`). |
 
 ### 🛡️ Schema Evolution (The Golden Rules)
 Because telemetry is stored in binary, **never delete a field or change its data type**. 

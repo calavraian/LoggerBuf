@@ -129,6 +129,13 @@ def decode_logs(input_file, output, format, stats, head, tail):
     decode.run_decode(input_file, output, format, stats, head, tail)
 
 @cli.command()
+@click.argument('input_file')
+@click.option('--grep', help="Filter logs by keyword (case-insensitive).")
+def decode_debug(input_file, grep):
+    """Explores historical JSON debug logs visually in the terminal."""
+    decode.run_decode_debug(input_file, grep)
+
+@cli.command()
 @click.option('--threads', default=10, help="Number of concurrent threads.")
 @click.option('--writes', default=200, help="Writes per thread.")
 def stress_test(threads, writes):

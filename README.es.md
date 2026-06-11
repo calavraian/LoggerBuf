@@ -117,7 +117,8 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf add-subfield ...` | Inyecta de forma segura un nuevo campo en un evento existente. |
 | `loggerbuf deprecate-subfield` | Depreca un campo de forma segura sin romper datos históricos. |
 | `loggerbuf build` | Ejecuta el Schema Linter y compila los `.proto` a Python. |
-| `loggerbuf decode-logs <File>` | Decodifica logs binarios a la Terminal o a formato JSONL. |
+| `loggerbuf decode-logs <File>` | Decodifica logs de telemetría binarios a la Terminal o a formato JSONL. |
+| `loggerbuf decode-debug <File>`| Explora logs de debug históricos (JSON) visualmente en la terminal (soporta `--grep`). |
 
 ### 🛡️ Evolución de Esquemas (Las Reglas de Oro)
 Debido a que la telemetría se almacena en binario, **nunca debes eliminar un campo ni cambiar su tipo de dato**.
