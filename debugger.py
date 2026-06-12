@@ -19,10 +19,12 @@ class LogLevel(Enum):
     ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 
-class StreamLevel(Enum):
-    ONLY_CONSOLE = 1
-    ONLY_FILE = 2
-    FILE_CONSOLE = 3
+class LogDestination(Enum):
+    CONSOLE = 1
+    FILE_LIVE = 2
+    FILE_HISTORY = 3
+    CONSOLE_AND_FILE_LIVE = 4
+    CONSOLE_AND_FILE_HISTORY = 5
 
 class RolloverType(Enum):
     NONE = 0
@@ -163,7 +165,7 @@ class LoggerSettings:
             logs_base_dir: str = ".", 
             backup_dir: str = None,
             file_size: int = None,
-            stream: StreamLevel = StreamLevel.ONLY_FILE):
+            stream: LogDestination = LogDestination.CONSOLE):
         """
         Configuration for the logger.
         
@@ -172,7 +174,7 @@ class LoggerSettings:
             logs_base_dir (str, optional): The base directory for all logs. Defaults to None (will use default config).
             backup_dir (str, optional): The directory for rotated logs. Defaults to None (will use default config).
             file_size (int, optional): The maximum file size in bytes before rotation. Defaults to None.
-            stream (StreamLevel, optional): Indicates if it should log to console. Defaults to ONLY_FILE.
+            stream (LogDestination, optional): Logging destination. Defaults to CONSOLE.
         """
         config = ConfigManager()
         self.__name = name if name is not None else config.get(ConfigKey.LOGGING_LOGGER_NAME)
@@ -232,7 +234,7 @@ class LoggerSettings:
 
         Returns
         -------
-        StreamLevel
+        LogDestination
             The stream type for the logger.
         """
         return self.__stream
@@ -274,12 +276,13 @@ class DebuggerLog:
                 stream_handler = self.__create_stream_handler()
 
                 # Initialize console filter based on settings
-                console_enabled = self.__settings.get_stream() in (StreamLevel.ONLY_CONSOLE, StreamLevel.FILE_CONSOLE)
+                dest = self.__settings.get_stream()
+                console_enabled = dest in (LogDestination.CONSOLE, LogDestination.CONSOLE_AND_FILE_LIVE, LogDestination.CONSOLE_AND_FILE_HISTORY)
                 console_filter = ConsoleFilter(is_enabled=console_enabled)
                 stream_handler.addFilter(console_filter)
                 
                 dest_handlers = []
-                if self.__settings.get_stream() in (StreamLevel.ONLY_FILE, StreamLevel.FILE_CONSOLE):
+                if dest in (LogDestination.FILE_LIVE, LogDestination.FILE_HISTORY, LogDestination.CONSOLE_AND_FILE_LIVE, LogDestination.CONSOLE_AND_FILE_HISTORY):
                     dest_handlers.append(debug_handler)
 
                 # Always add stream_handler, output is controlled by ConsoleFilter
@@ -307,15 +310,15 @@ class DebuggerLog:
                 DebuggerLog.__loggers[name] = (self.__settings, logger, console_filter)
                 DebuggerLog.__listeners[name] = listener
 
+                # Apply initial console settings IMMEDIATELY before global watcher could trigger
+                self._on_console_config_change(None)
+
                 # Subscribe to global ConfigWatcher for hot-reloading LOG_LEVEL
                 config_manager.subscribe(ConfigKey.LOG_LEVEL, self._on_log_level_change)
                 config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ENABLED, self._on_console_config_change)
                 config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_CLASSES, self._on_console_config_change)
                 config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_LEVELS, self._on_console_config_change)
                 config_manager.subscribe(ConfigKey.LOGGING_METADATA, self._on_metadata_change)
-                
-                # Apply initial console settings
-                self._on_console_config_change(None)
             else:
                 self.__settings = DebuggerLog.__loggers[name][0]
 

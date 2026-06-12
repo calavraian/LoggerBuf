@@ -2,7 +2,7 @@ import pytest
 import time
 import os
 import logging
-from debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel, LoggingUtils
+from debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel, LoggingUtils
 import config as defaults
 
 def test_debugger_lossy_queue(tmp_path):
@@ -24,7 +24,7 @@ def test_debugger_lossy_queue(tmp_path):
     assert True
 
 def test_debugger_console_filters_methods(tmp_path):
-    settings = LoggerSettings(name=f"TEST_FILTERS_{tmp_path.name}", stream=StreamLevel.FILE_CONSOLE)
+    settings = LoggerSettings(name=f"TEST_FILTERS_{tmp_path.name}", stream=LogDestination.CONSOLE_AND_FILE_HISTORY)
     logger = DebuggerLog(settings)
     
     # Disable
@@ -75,7 +75,7 @@ def test_debugger_setters(tmp_path):
     assert True
 
 def test_debugger_rotation_coverage(tmp_path):
-    settings = LoggerSettings(name=f"TEST_ROT_{tmp_path.name}", logs_base_dir=str(tmp_path), file_size=50)
+    settings = LoggerSettings(name=f"TEST_ROT_{tmp_path.name}", logs_base_dir=str(tmp_path), file_size=50, stream=LogDestination.FILE_HISTORY)
     logger = DebuggerLog(settings)
     
     # Force rotation by size

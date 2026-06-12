@@ -3,7 +3,7 @@ import json
 import time
 import pytest
 import subprocess
-from debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel
+from debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel
 from config import ConfigManager
 
 class DummyCaller:
@@ -16,7 +16,7 @@ def test_debugger_log_format_and_file_creation(tmp_path):
     settings = LoggerSettings(
         name="TEST_APP",
         logs_base_dir=str(tmp_path),
-        stream=StreamLevel.ONLY_FILE
+        stream=LogDestination.FILE_HISTORY
     )
     logger = DebuggerLog(settings)
     
@@ -51,14 +51,14 @@ def test_debugger_log_levels(tmp_path):
     script.write_text(f"""
 import time
 from config import ConfigManager
-from debugger import DebuggerLog, LoggerSettings, StreamLevel
+from debugger import DebuggerLog, LoggerSettings, LogDestination
 
 config = ConfigManager()
 config.set('LOG_LEVEL', 'DEBUG')
 settings = LoggerSettings(
     name="TEST_LEVELS",
     logs_base_dir="{tmp_path}",
-    stream=StreamLevel.ONLY_FILE
+    stream=LogDestination.FILE_HISTORY
 )
 logger = DebuggerLog(settings)
 logger.debug("Debug msg")
@@ -84,7 +84,7 @@ time.sleep(0.5)
 def test_debugger_console_filters(capsys):
     settings = LoggerSettings(
         name="TEST_CONSOLE",
-        stream=StreamLevel.ONLY_CONSOLE
+        stream=LogDestination.CONSOLE
     )
     logger = DebuggerLog(settings)
     
@@ -100,3 +100,42 @@ def test_debugger_console_filters(capsys):
     
     captured2 = capsys.readouterr()
     assert "Should NOT see this console message" not in captured2.err
+
+def test_debugger_history_cleanup(tmp_path):
+    import time
+    from config import ConfigManager, ConfigKey
+    config = ConfigManager()
+    
+    test_base_dir = tmp_path / "logs_cleanup"
+    test_backup_dir = "history"
+    
+    # Configure backups to 2
+    config.set(ConfigKey.LOGGING_BACKUP_COUNT, 2)
+    config.set(ConfigKey.LOGGING_BACKUP_DIR, test_backup_dir)
+    config.set(ConfigKey.LOGGING_FILE_SIZE, 100) # Small file size to force rotation quickly
+    
+    settings = LoggerSettings(
+        name=f"TEST_CLEANUP_{tmp_path.name}", 
+        logs_base_dir=str(test_base_dir),
+        stream=LogDestination.FILE_HISTORY
+    )
+    
+    debugger = DebuggerLog(settings)
+    
+    # Write enough data to trigger rotation multiple times
+    for i in range(500):
+        debugger.info(f"Test cleanup message {i} {"A" * 100}")
+        time.sleep(0.001)
+        
+    time.sleep(0.5)
+    
+    from datetime import datetime
+    current_date = datetime.now().date().strftime("%Y-%m-%d")
+    history_path = test_base_dir / "logs" / test_backup_dir / current_date
+    
+    # Ensure directory exists and check its files
+    assert history_path.exists()
+    gz_files = list(history_path.glob("*.gz"))
+    
+    # We should have exactly 2 files (since backup_count is 2)
+    assert len(gz_files) <= 2

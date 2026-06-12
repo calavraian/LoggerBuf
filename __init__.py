@@ -1,8 +1,8 @@
-from .debugger import DebuggerLog, LoggerSettings, StreamLevel, LogLevel
+from .debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel
 from .telemetry import TelemetryLog, EventSettings
 from .cli.handlers.decode import decode_file
 
-def create_debugger(name="MAIN", stream=StreamLevel.FILE_CONSOLE, logs_base_dir="."):
+def create_debugger(name="MAIN", stream=LogDestination.CONSOLE_AND_FILE_HISTORY, logs_base_dir="."):
     """
     Helper function to get or create an operational Debugger instance.
     
@@ -10,8 +10,8 @@ def create_debugger(name="MAIN", stream=StreamLevel.FILE_CONSOLE, logs_base_dir=
     ----------
     name : str
         Name of the debugger channel.
-    stream : StreamLevel
-        Where to send logs (ONLY_CONSOLE, ONLY_FILE, FILE_CONSOLE).
+    stream : LogDestination
+        Where to send logs (ONLY_CONSOLE, ONLY_FILE, CONSOLE_AND_FILE_HISTORY).
     logs_base_dir : str
         Base directory to store operational logs.
     """
