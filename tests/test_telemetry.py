@@ -9,9 +9,9 @@ import struct
 class DummyTelemetryCaller:
     def execute_telemetry(self, telemetry_logger):
         event = main_data_pb2.Event()
-        event.event_type = event_status_pb2.EventTypes.EVENT_DATA_BASE_PROCESSING
+        event.event_type = event_status_pb2.EventType.EVENT_DATA_BASE_PROCESSING
         event.general_note = "Strict Context Test"
-        event.status = event_status_pb2.Status.STATUS_COMPLETED
+        event.status = event_status_pb2.EventStatus.STATUS_COMPLETED
         
         telemetry_logger.send(event)
 

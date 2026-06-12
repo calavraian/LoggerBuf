@@ -34,9 +34,9 @@ def run_stress_test(num_threads: int, writes_per_thread: int):
             logger.debug(f"Thread-{thread_id} operational log #{i}")
             
             event = main_data_pb2.Event()
-            event.event_type = event_status_pb2.EventTypes.EVENT_GENERIC
+            event.event_type = event_status_pb2.EventType.EVENT_GENERIC
             event.general_note = f"Concurrent stress test event {i} from Thread-{thread_id}"
-            event.status = event_status_pb2.Status.STATUS_ACTIVE
+            event.status = event_status_pb2.EventStatus.STATUS_ACTIVE
             eventLogger.create_event(event)
 
     threads = []

@@ -86,7 +86,7 @@ class PaymentService:
 `[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Processing user payment...`
 
 ### 2. Analytical Event Logging (Telemetry)
-Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventTypes` and `Status` enums to ensure consistency across your organization. Just like the debugger, Telemetry automatically injects creation timestamps and routing headers behind the scenes.
+Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventType` and `EventStatus` enums to ensure consistency across your organization. Just like the debugger, Telemetry automatically injects creation timestamps and routing headers behind the scenes.
 
 ```python
 from data_logs import main_data_pb2, event_status_pb2
@@ -162,6 +162,24 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Retrieves the active value for a configuration key. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
+| `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
+| `loggerbuf event add-status <Type> <Status>`| Adds a new `EventStatus` specifically under an `EventType`. |
+
+### Sub-classifying Events (EventType & EventStatus)
+To achieve granular analytics, LoggerBuf allows you to define a hierarchy of sub-classifications (**EventType**) and their respective states (**EventStatus**). 
+**Note:** Using custom types and statuses is completely optional. You can always use the default global statuses (e.g. `STATUS_PENDING`, `STATUS_COMPLETED`) for any event if you prefer simplicity.
+
+```bash
+# Add a new EventType for network events, along with two statuses.
+loggerbuf event add-type NETWORK --statuses STARTED,FAILED
+
+# Later on, add a new status to the NETWORK type
+loggerbuf event add-status NETWORK TIMEOUT
+
+# View your registered types and statuses
+loggerbuf event list
+```
+*Don't forget to run `loggerbuf build` to compile the changes made by these commands!*
 | `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 
 ### 🛡️ Schema Evolution (The Golden Rules)

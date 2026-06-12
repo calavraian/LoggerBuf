@@ -5,6 +5,7 @@ from cli.handlers import protos
 from cli.handlers import decode
 from cli.handlers import stress
 from cli.handlers import fields
+from cli.handlers import events
 from config import ConfigManager
 
 @click.group()
@@ -75,6 +76,11 @@ def register_event(field_name, message_name, file):
     try:
         protos.register_event(field_name, message_name, file)
         click.secho(f"Event '{field_name}' registered and compiled successfully.", fg="green")
+        click.secho(
+            f"\n[TIP] Consider adding specific sub-classifications (EventTypes) and statuses (EventStatus) "
+            f"for your new event using 'loggerbuf event add-type' to enable deeper telemetry analytics.",
+            fg="cyan"
+        )
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
@@ -140,9 +146,52 @@ def decode_debug(input_file, grep, head, tail):
     decode.run_decode_debug(input_file, grep, head, tail)
 
 @cli.group()
+def event():
+    """Manage Event types and statuses."""
+    pass
+
+@cli.group()
 def config():
     """Manage LoggerBuf global configurations (loggerbuf.json)."""
     pass
+
+@event.command()
+@click.argument('name')
+@click.option('--statuses', default="", help="Comma separated list of statuses (e.g. ST1,ST2)")
+@click.option('--reserve', default=10, type=int, help="Number of extra indices to reserve for future statuses.")
+def add_type(name, statuses, reserve):
+    """Adds a new event type and optional statuses."""
+    status_list = [s.strip() for s in statuses.split(",")] if statuses else []
+    try:
+        events.add_type(name, status_list, reserve)
+        click.secho("\n[WARNING] You modified the .proto file.", fg="yellow")
+        click.secho("Run 'loggerbuf build' to compile it, and restart your application for changes to take effect.", fg="yellow")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
+@event.command()
+@click.argument('type_name')
+@click.argument('status_name')
+def add_status(type_name, status_name):
+    """Adds a new status to an existing event type."""
+    try:
+        events.add_status(type_name, status_name)
+        click.secho("\n[WARNING] You modified the .proto file.", fg="yellow")
+        click.secho("Run 'loggerbuf build' to compile it, and restart your application for changes to take effect.", fg="yellow")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
+@event.command(name="list")
+@click.argument('type_name', required=False)
+def list_cmd(type_name):
+    """Lists registered event types and statuses."""
+    try:
+        events.list_events(type_name)
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
 
 @config.command()
 @click.argument('key')

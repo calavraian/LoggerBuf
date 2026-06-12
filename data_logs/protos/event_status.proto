@@ -7,7 +7,7 @@ package enum_control;
 * add specific statuses for the different types of events here
 * define and reserve a range of values for each event.
 */    
-enum Status {
+enum EventStatus {
     // Generic statuses for any event tyoe
     // Range: 0-50
     // Next value: 6
@@ -30,7 +30,7 @@ enum Status {
 * All events to be logged need to be registered here first
 * define and reserve a range of values for each event.
 */
-enum EventTypes {
+enum EventType {
     // Generic event types, can be used for general logging
     // in case a specific event type is not defined.
     // Range: 0-100

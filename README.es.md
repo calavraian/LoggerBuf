@@ -61,7 +61,7 @@ class PaymentService:
 `[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Procesando pago de usuario...`
 
 ### 2. Eventos Analíticos (Telemetría)
-La telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usando tus enums personalizados de `EventTypes` y `Status` para asegurar consistencia en toda tu organización. Al igual que el debugger, la Telemetría inyecta automáticamente marcas de tiempo y cabeceras de enrutamiento tras bambalinas.
+La Telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usando tus enums personalizados `EventType` y `EventStatus` para asegurar la consistencia. Al igual que el debugger, la Telemetría inyecta automáticamente las marcas de tiempo y el enrutamiento. tras bambalinas.
 
 ```python
 from data_logs import main_data_pb2, event_status_pb2
@@ -82,10 +82,6 @@ telemetry.send(event)
 
 ## 🎛️ Control Total (Configuración Avanzada)
 
-Aunque el inicio de "Cero Configuración" es genial para arrancar rápido, los desarrolladores avanzados necesitan control absoluto. `LoggerBuf` no te encierra. Puedes personalizar profundamente los tamaños de rotación, las colas de memoria y las rutas de forma global o por instancia.
-
-**1. Por Defecto Globales (`settings_globals.py`)**
-Ajusta las restricciones centrales del motor:
 ## 🎛️ Configuración Avanzada y Hot Reload
 
 LoggerBuf se puede configurar globalmente mediante el archivo `loggerbuf.json` en tu directorio raíz. La forma más fácil de administrarlo es con el CLI:
@@ -130,8 +126,26 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf build` | Ejecuta el Schema Linter y compila los `.proto` a Python. |
 | `loggerbuf config set <key> <value>` | Actualiza la configuración global. Ejemplo: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Consulta un valor de configuración global. |
-| `loggerbuf decode-logs <File>` | Decodifica logs de telemetría binarios a la Terminal o a formato JSONL. |
+| `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
+| `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
+| `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
 | `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
+
+### Sub-clasificación de Eventos (EventType y EventStatus)
+Para lograr analíticas granulares, LoggerBuf te permite definir una jerarquía de sub-clasificaciones (**EventType**) y sus respectivos estados (**EventStatus**). 
+**Nota:** Usar tipos y estados personalizados es completamente opcional. Siempre puedes usar los estados globales por defecto (ej. `STATUS_PENDING`, `STATUS_COMPLETED`) para cualquier evento si prefieres mantenerlo simple.
+
+```bash
+# Añade un nuevo EventType para red, junto con dos estados.
+loggerbuf event add-type NETWORK --statuses STARTED,FAILED
+
+# Más adelante, añade un nuevo estado al tipo NETWORK
+loggerbuf event add-status NETWORK TIMEOUT
+
+# Lista tus tipos y estados registrados
+loggerbuf event list
+```
+*¡No olvides ejecutar `loggerbuf build` para compilar los cambios hechos por estos comandos!*
 
 ### 🛡️ Evolución de Esquemas (Las Reglas de Oro)
 Debido a que la telemetría se almacena en binario, **nunca debes eliminar un campo ni cambiar su tipo de dato**.

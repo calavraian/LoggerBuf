@@ -17,7 +17,7 @@ package main_data;
 
 message Event {{
     // The type of event. Add event types in [EventTypes].
-    enum_control.EventTypes event_type = 1;
+    enum_control.EventType event_type = 1;
 
     // The timestamp of the event is set by the server
     string timestamp = 2;
@@ -26,7 +26,7 @@ message Event {{
     string general_note = 3;
     
     // The status of the event is set by the app. Update [Status] list.
-    enum_control.Status status = 4;
+    enum_control.EventStatus status = 4;
 
     // The name of the EventLogger instance (e.g. MAIN, SECURITY)
     string logger_name = 6;
