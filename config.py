@@ -4,6 +4,41 @@ import threading
 import time
 from enum import Enum
 
+
+class ConfigKey(str, Enum):
+    LOG_LEVEL = "LOG_LEVEL"
+    LOGGING_BASE_DIR = "LOGGING_BASE_DIR"
+    LOGGING_BACKUP_DIR = "LOGGING_BACKUP_DIR"
+    LOGGING_MAIN_FILE_NAME = "LOGGING_MAIN_FILE_NAME"
+    LOGGING_DEBUG_FILE_NAME = "LOGGING_DEBUG_FILE_NAME"
+    LOGGING_BACKUP_COUNT = "LOGGING_BACKUP_COUNT"
+    LOGGING_LOGGER_NAME = "LOGGING_LOGGER_NAME"
+    LOGGING_FILE_SIZE = "LOGGING_FILE_SIZE"
+    LOGGING_QUEUE_MAX_SIZE = "LOGGING_QUEUE_MAX_SIZE"
+    LOGGING_QUEUE_STRATEGY = "LOGGING_QUEUE_STRATEGY"
+    LOGGING_CONSOLE_ENABLED = "LOGGING_CONSOLE_ENABLED"
+    LOGGING_CONSOLE_ALLOWED_CLASSES = "LOGGING_CONSOLE_ALLOWED_CLASSES"
+    LOGGING_CONSOLE_ALLOWED_LEVELS = "LOGGING_CONSOLE_ALLOWED_LEVELS"
+    LOGGING_METADATA = "LOGGING_METADATA"
+
+    EVENT_BASE_DIR = "EVENT_BASE_DIR"
+    EVENT_BACKUP_DIR = "EVENT_BACKUP_DIR"
+    EVENT_MAIN_FILE_NAME = "EVENT_MAIN_FILE_NAME"
+    EVENT_BACKUP_COUNT = "EVENT_BACKUP_COUNT"
+    EVENT_LOGGER_NAME = "EVENT_LOGGER_NAME"
+    EVENT_FILE_SIZE = "EVENT_FILE_SIZE"
+    EVENT_QUEUE_MAX_SIZE = "EVENT_QUEUE_MAX_SIZE"
+    EVENT_QUEUE_STRATEGY = "EVENT_QUEUE_STRATEGY"
+
+class LogMetadata(str, Enum):
+    TIMESTAMP = "TIMESTAMP"
+    LOGGER = "LOGGER"
+    LEVEL = "LEVEL"
+    FILE = "FILE"
+    CLASS = "CLASS"
+    FUNCTION = "FUNCTION"
+    LINE = "LINE"
+
 class QueueStrategy(Enum):
     LOSSY = 1
     LOSSLESS = 2
@@ -28,12 +63,16 @@ DEFAULT_CONFIG = {
     "EVENT_LOGGER_NAME": "MAIN",
     "EVENT_FILE_SIZE": 1024,
     "EVENT_QUEUE_MAX_SIZE": 10000,
-    "EVENT_QUEUE_STRATEGY": "LOSSLESS"
+    "EVENT_QUEUE_STRATEGY": "LOSSLESS",
+    "LOGGING_CONSOLE_ENABLED": True,
+    "LOGGING_CONSOLE_ALLOWED_CLASSES": [],
+    "LOGGING_CONSOLE_ALLOWED_LEVELS": [],
+    "LOGGING_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "FILE", "CLASS", "FUNCTION", "LINE"]
 }
 
 class ConfigManager:
     _instance = None
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __new__(cls):
         with cls._lock:
@@ -61,6 +100,8 @@ class ConfigManager:
             self.save()  # Generate default file on first run
 
     def get(self, key, default_value=None):
+        if isinstance(key, Enum):
+            key = key.value
         if key in self._config:
             return self._config[key]
         if key in DEFAULT_CONFIG:
@@ -68,12 +109,18 @@ class ConfigManager:
         return default_value
 
     def set(self, key, value):
+        if isinstance(key, Enum):
+            key = key.value
+        changed = False
         with self._lock:
             old_value = self._config.get(key)
             self._config[key] = value
             self.save()
             if old_value != value:
-                self._notify(key, value)
+                changed = True
+        
+        if changed:
+            self._notify(key, value)
 
     def save(self):
         try:
@@ -83,6 +130,8 @@ class ConfigManager:
             print(f"Error saving {CONFIG_FILE}: {e}")
 
     def subscribe(self, key, callback):
+        if isinstance(key, Enum):
+            key = key.value
         with self._lock:
             if key not in self._subscribers:
                 self._subscribers[key] = []
@@ -109,13 +158,16 @@ class ConfigManager:
                         mtime = os.path.getmtime(CONFIG_FILE)
                         if mtime > self._last_mtime:
                             self._last_mtime = mtime
+                            changes = []
                             with self._lock:
                                 old_config = dict(self._config)
                                 self.load()
                                 # Check what changed
                                 for key in self._config:
                                     if old_config.get(key) != self._config[key]:
-                                        self._notify(key, self._config[key])
+                                        changes.append((key, self._config[key]))
+                            for key, val in changes:
+                                self._notify(key, val)
                 except Exception as e:
                     pass
                 time.sleep(5)

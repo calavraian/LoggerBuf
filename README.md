@@ -33,6 +33,31 @@ log.info("Application started safely.")
 
 ---
 
+
+## 🏢 Enterprise Debugging Features
+
+LoggerBuf provides advanced, enterprise-grade features that let you fine-tune the debugger output at runtime, without needing to restart your application or change any code.
+
+### 1. Dynamic Console Filtering
+Sometimes you only want to see logs from a specific class or severity level on the console, without stopping the application or affecting the file logs. You can configure this dynamically via `loggerbuf.json`:
+- `LOGGING_CONSOLE_ENABLED`: Turn the console output completely on or off (`true`/`false`).
+- `LOGGING_CONSOLE_ALLOWED_CLASSES`: List of class names to show on the console (e.g., `["PaymentService", "AuthWorker"]`). Leave empty to allow all.
+- `LOGGING_CONSOLE_ALLOWED_LEVELS`: List of log levels to show on the console (e.g., `["ERROR", "CRITICAL"]`). Leave empty to allow all.
+
+### 2. Configurable Metadata
+By default, the debugger tracks timestamp, logger name, log level, file name, class, function, and line number. You can customize exactly which metadata fields are included in both the JSON file logs and the console output using the `LOGGING_METADATA` key in your configuration:
+```json
+"LOGGING_METADATA": ["TIMESTAMP", "LEVEL", "MESSAGE"]
+```
+This reduces storage costs and visual noise if you don't need full tracking.
+
+### 3. Complex Object Serialization
+You can pass dictionaries, lists, or custom class instances directly to the logger. LoggerBuf will safely intercept and serialize them to formatted JSON (with a silent fail-safe if an object is unserializable), keeping your code perfectly clean:
+```python
+user_data = {"id": 123, "role": "admin"}
+log.info(user_data)
+```
+
 ## ⚙️ Under the Hood (The Technical Engine)
 
 *   **⚡ Async Background Thread**: Enqueuing a log takes an average of **0.004 ms**. A dedicated background worker handles the heavy lifting of writing to disk, ensuring your main application never blocks.

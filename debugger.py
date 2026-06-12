@@ -7,7 +7,7 @@ import queue
 import sys
 import threading
 import time
-from config import ConfigManager, CONFIG_FILE, QueueStrategy
+from config import ConfigManager, CONFIG_FILE, QueueStrategy, ConfigKey, LogMetadata
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
@@ -73,17 +73,31 @@ class ConsoleFilter(logging.Filter):
 
 
 class JsonFormatter(logging.Formatter):
+    def __init__(self, metadata_fields=None):
+        super().__init__()
+        if metadata_fields is None:
+            self.metadata_fields = [e.value for e in LogMetadata]
+        else:
+            self.metadata_fields = metadata_fields
+
     def format(self, record):
-        log_obj = {
-            "timestamp": self.formatTime(record, self.datefmt),
-            "logger": record.name,
-            "level": record.levelname,
-            "file": getattr(record, "filename", "Unknown"),
-            "class": getattr(record, "caller_class", "None"),
-            "function": getattr(record, "funcName", "Unknown"),
-            "line": getattr(record, "lineno", 0),
-            "message": record.getMessage()
-        }
+        log_obj = {}
+        if LogMetadata.TIMESTAMP.value in self.metadata_fields:
+            log_obj["timestamp"] = self.formatTime(record, self.datefmt)
+        if LogMetadata.LOGGER.value in self.metadata_fields:
+            log_obj["logger"] = record.name
+        if LogMetadata.LEVEL.value in self.metadata_fields:
+            log_obj["level"] = record.levelname
+        if LogMetadata.FILE.value in self.metadata_fields:
+            log_obj["file"] = getattr(record, "filename", "Unknown")
+        if LogMetadata.CLASS.value in self.metadata_fields:
+            log_obj["class"] = getattr(record, "caller_class", "None")
+        if LogMetadata.FUNCTION.value in self.metadata_fields:
+            log_obj["function"] = getattr(record, "funcName", "Unknown")
+        if LogMetadata.LINE.value in self.metadata_fields:
+            log_obj["line"] = getattr(record, "lineno", 0)
+        
+        log_obj["message"] = record.getMessage()
         return json.dumps(log_obj, ensure_ascii=False)
 
 
@@ -161,10 +175,10 @@ class LoggerSettings:
             stream (StreamLevel, optional): Indicates if it should log to console. Defaults to ONLY_FILE.
         """
         config = ConfigManager()
-        self.__name = name if name is not None else config.get('LOGGING_LOGGER_NAME')
+        self.__name = name if name is not None else config.get(ConfigKey.LOGGING_LOGGER_NAME)
         self.__logs_base_dir = logs_base_dir 
-        self.__backup_dir = backup_dir if backup_dir is not None else config.get('LOGGING_BACKUP_DIR')
-        self.__file_size = file_size if file_size is not None else config.get('LOGGING_FILE_SIZE')
+        self.__backup_dir = backup_dir if backup_dir is not None else config.get(ConfigKey.LOGGING_BACKUP_DIR)
+        self.__file_size = file_size if file_size is not None else config.get(ConfigKey.LOGGING_FILE_SIZE)
         self.__stream = stream
     
     def get_name(self):
@@ -226,8 +240,7 @@ class LoggerSettings:
 class DebuggerLog:
     __loggers = {}
     __listeners = {}
-    __log_format = '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
-    __lock = threading.Lock()
+    __lock = threading.RLock()
 
     def __init__(self, settings: LoggerSettings = None):
         if not settings:
@@ -241,8 +254,8 @@ class DebuggerLog:
                 config_manager = ConfigManager()
                 
                 # Retrieve configuration with safe defaults
-                queue_max_size = config_manager.get('LOGGING_QUEUE_MAX_SIZE')
-                queue_strategy_val = config_manager.get('LOGGING_QUEUE_STRATEGY')
+                queue_max_size = config_manager.get(ConfigKey.LOGGING_QUEUE_MAX_SIZE)
+                queue_strategy_val = config_manager.get(ConfigKey.LOGGING_QUEUE_STRATEGY)
                 queue_strategy = QueueStrategy.LOSSY
                 if queue_strategy_val == "LOSSLESS":
                     queue_strategy = QueueStrategy.LOSSLESS
@@ -250,10 +263,10 @@ class DebuggerLog:
                     queue_strategy = QueueStrategy.LOSSY
                 
                 full_path_logs = self.__full_path_logs()
-                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get('LOGGING_DEBUG_FILE_NAME')}_{name}.log")
+                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get(ConfigKey.LOGGING_DEBUG_FILE_NAME)}_{name}.log")
 
                 # Consolidated to single file
-                log_level_str = config_manager.get('LOG_LEVEL', 'DEBUG')
+                log_level_str = config_manager.get(ConfigKey.LOG_LEVEL, 'DEBUG')
                 print("DEBUG: log_level_str in init is", log_level_str)
                 initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
                 
@@ -295,9 +308,71 @@ class DebuggerLog:
                 DebuggerLog.__listeners[name] = listener
 
                 # Subscribe to global ConfigWatcher for hot-reloading LOG_LEVEL
-                config_manager.subscribe('LOG_LEVEL', self._on_log_level_change)
+                config_manager.subscribe(ConfigKey.LOG_LEVEL, self._on_log_level_change)
+                config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ENABLED, self._on_console_config_change)
+                config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_CLASSES, self._on_console_config_change)
+                config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_LEVELS, self._on_console_config_change)
+                config_manager.subscribe(ConfigKey.LOGGING_METADATA, self._on_metadata_change)
+                
+                # Apply initial console settings
+                self._on_console_config_change(None)
             else:
                 self.__settings = DebuggerLog.__loggers[name][0]
+
+
+    def __get_log_format(self):
+        config = ConfigManager()
+        fields = config.get(ConfigKey.LOGGING_METADATA, [e.value for e in LogMetadata])
+        
+        parts = []
+        if LogMetadata.TIMESTAMP.value in fields:
+            parts.append('[{asctime}]')
+        
+        if LogMetadata.LOGGER.value in fields:
+            parts.append('>>{name}<<')
+            
+        loc_parts = []
+        if LogMetadata.FILE.value in fields:
+            loc_parts.append('{filename}')
+        if LogMetadata.CLASS.value in fields:
+            loc_parts.append('{caller_class}')
+        if LogMetadata.FUNCTION.value in fields:
+            loc_parts.append('{funcName}')
+        if loc_parts:
+            loc_str = "::".join(loc_parts)
+            if LogMetadata.LINE.value in fields:
+                loc_str += "->{lineno}"
+            parts.append(f"({loc_str})")
+            
+        if LogMetadata.LEVEL.value in fields:
+            parts.append('- *{levelname}* -')
+            
+        parts.append('message::>{message}')
+        return " ".join(parts)
+
+    def _on_console_config_change(self, _):
+        config_manager = ConfigManager()
+        enabled = config_manager.get(ConfigKey.LOGGING_CONSOLE_ENABLED, True)
+        allowed_classes = config_manager.get(ConfigKey.LOGGING_CONSOLE_ALLOWED_CLASSES, [])
+        allowed_levels_str = config_manager.get(ConfigKey.LOGGING_CONSOLE_ALLOWED_LEVELS, [])
+        
+        allowed_classes = None if not allowed_classes else allowed_classes
+        allowed_levels = None
+        if allowed_levels_str:
+            allowed_levels = [getattr(logging, lvl.upper(), logging.DEBUG) for lvl in allowed_levels_str]
+
+        if enabled:
+            self.enable_console(allowed_classes, allowed_levels)
+        else:
+            self.disable_console()
+
+    def _on_metadata_change(self, new_metadata):
+        name = self.__settings.get_name()
+        if name in DebuggerLog.__listeners:
+            listener = DebuggerLog.__listeners[name]
+            for handler in listener.handlers:
+                is_json = isinstance(handler, SizedTimedRotatingFileHandler)
+                self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
 
     def _on_log_level_change(self, new_level_str):
         """Called by ConfigManager when LOG_LEVEL changes."""
@@ -359,10 +434,12 @@ class DebuggerLog:
         return self.__config_handler(handler=handler, logLevel=logging.DEBUG, rotator=False, is_json=False)
 
     def __config_handler(self, handler, logLevel, rotator=False, is_json=False):
+        config = ConfigManager()
+        fields = config.get(ConfigKey.LOGGING_METADATA, [e.value for e in LogMetadata])
         if is_json:
-            log_formatter = JsonFormatter()
+            log_formatter = JsonFormatter(metadata_fields=fields)
         else:
-            log_formatter = logging.Formatter(DebuggerLog.__log_format, style='{')
+            log_formatter = logging.Formatter(self.__get_log_format(), style='{')
         handler.setFormatter(log_formatter)
         handler.setLevel(logLevel)
         if rotator:
@@ -374,7 +451,7 @@ class DebuggerLog:
     def __full_path_logs(self):
         logs_base_dir = self.__settings.get_logs_base_dir() if self.__settings.get_logs_base_dir() != "." else os.getcwd()
         config = ConfigManager()
-        full_path_logs = os.path.join(logs_base_dir, config.get('LOGGING_BASE_DIR'))
+        full_path_logs = os.path.join(logs_base_dir, config.get(ConfigKey.LOGGING_BASE_DIR))
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 
@@ -425,6 +502,18 @@ class DebuggerLog:
 
     def __log_message(self, level, message):
         extra = {"caller_class": self.__get_caller_class()}
+        
+        if isinstance(message, (dict, list, tuple)):
+            try:
+                message = json.dumps(message, default=str, ensure_ascii=False, indent=2)
+            except Exception as e:
+                message = f"<[Unserializable Object: {type(message).__name__}] - {e}>"
+        elif hasattr(message, '__dict__'):
+            try:
+                message = json.dumps(message.__dict__, default=str, ensure_ascii=False, indent=2)
+            except Exception as e:
+                message = f"<[Unserializable Object: {type(message).__name__}] - {e}>"
+
         self.__get_logger().log(level, message, extra=extra, stacklevel=3)
     
     def __get_handler_rotating(self):

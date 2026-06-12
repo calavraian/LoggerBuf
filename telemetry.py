@@ -4,7 +4,7 @@ import os
 import queue
 import threading
 import time
-from config import ConfigManager, QueueStrategy
+from config import ConfigManager, QueueStrategy, ConfigKey
 
 from data_logs import main_data_pb2
 from queue_metrics import QueueMetrics, MetricField
