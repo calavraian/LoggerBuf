@@ -91,3 +91,25 @@ def test_debugger_rotation_coverage(tmp_path):
     from config import ConfigManager
     backup_dir = tmp_path / ConfigManager().get('LOGGING_BASE_DIR') / settings.get_backup_dir()
     assert backup_dir.exists()
+
+def test_debugger_log_destination_fallback(tmp_path):
+    # Test Priority 1: Explicit stream
+    settings_explicit = LoggerSettings(name="TEST_EXPLICIT", stream=LogDestination.FILE_HISTORY)
+    assert getattr(settings_explicit, "_LoggerSettings__stream") == LogDestination.FILE_HISTORY
+
+    # Test Priority 2: JSON config
+    from config import ConfigManager, ConfigKey
+    config = ConfigManager()
+    original_dest = config.get(ConfigKey.LOGGING_DESTINATION)
+    
+    config.set(ConfigKey.LOGGING_DESTINATION, "FILE_LIVE")
+    settings_json = LoggerSettings(name="TEST_JSON")
+    assert getattr(settings_json, "_LoggerSettings__stream") == LogDestination.FILE_LIVE
+    
+    # Test Priority 3: Invalid JSON fallback
+    config.set(ConfigKey.LOGGING_DESTINATION, "INVALID_STREAM_NAME")
+    settings_fallback = LoggerSettings(name="TEST_FALLBACK")
+    assert getattr(settings_fallback, "_LoggerSettings__stream") == LogDestination.CONSOLE
+    
+    # Restore original
+    config.set(ConfigKey.LOGGING_DESTINATION, original_dest)

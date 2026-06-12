@@ -165,7 +165,7 @@ class LoggerSettings:
             logs_base_dir: str = ".", 
             backup_dir: str = None,
             file_size: int = None,
-            stream: LogDestination = LogDestination.CONSOLE):
+            stream: LogDestination = None):
         """
         Configuration for the logger.
         
@@ -174,14 +174,22 @@ class LoggerSettings:
             logs_base_dir (str, optional): The base directory for all logs. Defaults to None (will use default config).
             backup_dir (str, optional): The directory for rotated logs. Defaults to None (will use default config).
             file_size (int, optional): The maximum file size in bytes before rotation. Defaults to None.
-            stream (LogDestination, optional): Logging destination. Defaults to CONSOLE.
+            stream (LogDestination, optional): Logging destination. Defaults to None (will fetch from config, fallback to CONSOLE).
         """
         config = ConfigManager()
         self.__name = name if name is not None else config.get(ConfigKey.LOGGING_LOGGER_NAME)
         self.__logs_base_dir = logs_base_dir 
         self.__backup_dir = backup_dir if backup_dir is not None else config.get(ConfigKey.LOGGING_BACKUP_DIR)
         self.__file_size = file_size if file_size is not None else config.get(ConfigKey.LOGGING_FILE_SIZE)
-        self.__stream = stream
+        
+        if stream is not None:
+            self.__stream = stream
+        else:
+            dest_str = config.get(ConfigKey.LOGGING_DESTINATION)
+            try:
+                self.__stream = LogDestination[str(dest_str).upper()]
+            except (KeyError, AttributeError):
+                self.__stream = LogDestination.CONSOLE
     
     def get_name(self):
         """
