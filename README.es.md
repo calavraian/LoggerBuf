@@ -43,6 +43,33 @@ log.info("Aplicación iniciada de forma segura.")
 
 ---
 
+## 🏢 Características Empresariales de Depuración
+
+LoggerBuf provee herramientas avanzadas que te permiten ajustar la salida del depurador en tiempo real, sin reiniciar tu aplicación.
+
+### 1. Filtrado Dinámico de Consola
+Puedes configurar qué ver en consola dinámicamente mediante `loggerbuf.json`:
+- `LOGGING_CONSOLE_ENABLED`: Activa o desactiva la salida de consola (`true`/`false`).
+- `LOGGING_CONSOLE_ALLOWED_CLASSES`: Lista de clases a mostrar (ej. `["PaymentService"]`).
+- `LOGGING_CONSOLE_ALLOWED_LEVELS`: Lista de niveles a mostrar (ej. `["ERROR"]`).
+
+### 2. Metadatos Configurables
+Controla qué campos de rastreo (timestamp, archivo, clase, línea) se guardan usando `LOGGING_METADATA` en tu configuración.
+
+### 3. Destino y Persistencia (History On/Off)
+Tienes control absoluto sobre dónde van tus logs. La persistencia en disco no es forzosa. Configura `LOGGING_DESTINATION` con 5 modos:
+- `CONSOLE`: Historial APAGADO. Imprime solo a la terminal. Ideal para desarrollo local.
+- `JSON`: Historial ENCENDIDO. Escribe JSON estructurado en disco.
+- `GZIP`: Historial ENCENDIDO. Escribe directo a Gzip comprimido. Ideal para producción.
+- `JSON_AND_CONSOLE`: Historial ENCENDIDO. Disco y terminal simultáneamente.
+- `GZIP_AND_CONSOLE`: Historial ENCENDIDO. Gzip y terminal simultáneamente.
+*(Si hay un error en tu configuración JSON, LoggerBuf degradará de forma segura a `CONSOLE` para evitar pérdida de trazas).*
+
+### 4. Serialización de Objetos Complejos
+Pasa diccionarios, listas u objetos personalizados. LoggerBuf los interceptará y los convertirá a JSON seguro, manteniendo tu código limpio.
+
+---
+
 ## 💻 Guía Operativa (En las trincheras)
 
 ### 1. Logs Operativos de Diagnóstico (Debugger)
@@ -59,6 +86,14 @@ class PaymentService:
 ```
 *Observa la "Información de Rastreo Gratis" enriquecida automáticamente en la salida:*
 `[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Procesando pago de usuario...`
+
+**Entendiendo la Estructura de Salida:**
+Nuestro formateador revela al instante el *dónde* y el *qué* de cualquier registro sin que pases contexto extra:
+- `[Timestamp]`: Preciso al milisegundo.
+- `>>NombreLogger<<`: Identifica qué módulo emitió el log (ej. `MAIN_APP`).
+- `(archivo.py::Clase::metodo->linea)`: La ubicación exacta en el código. Nunca más adivines de dónde viene un error.
+- `- *NIVEL* -`: La severidad (`INFO`, `ERROR`, etc.).
+- `message::> [Payload]`: El mensaje real o el objeto JSON serializado.
 
 ### 2. Eventos Analíticos (Telemetría)
 La Telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usando tus enums personalizados `EventType` y `EventStatus` para asegurar la consistencia. Al igual que el debugger, la Telemetría inyecta automáticamente las marcas de tiempo y el enrutamiento. tras bambalinas.
@@ -130,6 +165,28 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
 | `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
+
+### Ejemplos Potentes del CLI
+
+**1. Decodificar Telemetría Binaria:**
+Extrae miles de eventos binarios a un JSON legible en milisegundos.
+```bash
+# Imprime en formato JSON legible en la terminal
+loggerbuf decode-logs logs/telemetry_queue.bin
+
+# Decodifica directo a un archivo JSONL para bases de datos
+loggerbuf decode-logs logs/telemetry_queue.bin --out output.jsonl
+```
+
+**2. Explorar el Historial de Depuración:**
+Busca entre gigabytes de logs operativos (JSON o Gzip) sin esfuerzo usando el explorador integrado.
+```bash
+# Busca la palabra 'CRITICAL' en un archivo comprimido y muestra los últimos 20
+loggerbuf decode-debug logs/history/debug_logs.gz --grep "CRITICAL" --tail 20
+
+# Ve los primeros 50 logs de un archivo JSON estándar
+loggerbuf decode-debug logs/history/debug_logs.json --head 50
+```
 
 ### Sub-clasificación de Eventos (EventType y EventStatus)
 Para lograr analíticas granulares, LoggerBuf te permite definir una jerarquía de sub-clasificaciones (**EventType**) y sus respectivos estados (**EventStatus**). 

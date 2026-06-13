@@ -44,14 +44,23 @@ Sometimes you only want to see logs from a specific class or severity level on t
 - `LOGGING_CONSOLE_ALLOWED_CLASSES`: List of class names to show on the console (e.g., `["PaymentService", "AuthWorker"]`). Leave empty to allow all.
 - `LOGGING_CONSOLE_ALLOWED_LEVELS`: List of log levels to show on the console (e.g., `["ERROR", "CRITICAL"]`). Leave empty to allow all.
 
-### 2. Configurable Metadata
+### 2. Log Destination & Persistence (History On/Off)
+LoggerBuf gives you complete control over where logs are sent. Persistence is intentional, not forced. You can configure `LOGGING_DESTINATION` via `loggerbuf.json` with 5 different modes:
+- `CONSOLE`: History OFF. Prints beautifully formatted logs to the terminal only. Perfect for local dev.
+- `JSON`: History ON. Writes structured JSON logs to disk. Excellent for log aggregators.
+- `GZIP`: History ON. Writes directly to compressed Gzip files. Ideal for production servers with limited storage.
+- `JSON_AND_CONSOLE`: History ON. Writes to disk and echoes to the terminal.
+- `GZIP_AND_CONSOLE`: History ON. Writes to compressed disk files and echoes to the terminal.
+*(If a misconfiguration occurs, LoggerBuf will safely fallback to `CONSOLE` to ensure you never lose a trace).*
+
+### 3. Configurable Metadata
 By default, the debugger tracks timestamp, logger name, log level, file name, class, function, and line number. You can customize exactly which metadata fields are included in both the JSON file logs and the console output using the `LOGGING_METADATA` key in your configuration:
 ```json
 "LOGGING_METADATA": ["TIMESTAMP", "LEVEL", "MESSAGE"]
 ```
 This reduces storage costs and visual noise if you don't need full tracking.
 
-### 3. Complex Object Serialization
+### 4. Complex Object Serialization
 You can pass dictionaries, lists, or custom class instances directly to the logger. LoggerBuf will safely intercept and serialize them to formatted JSON (with a silent fail-safe if an object is unserializable), keeping your code perfectly clean:
 ```python
 user_data = {"id": 123, "role": "admin"}
@@ -84,6 +93,14 @@ class PaymentService:
 ```
 *Notice the "Free Tracking Info" automatically enriched in the output:*
 `[2026-05-29 10:15:30,123] >>MAIN_APP<< (payment.py::PaymentService::process->5) - *INFO* - message::>Processing user payment...`
+
+**Understanding the Output Signature:**
+The custom formatter instantly reveals the *where* and *what* of any log entry without requiring you to pass extra context. By default, every log line contains:
+- `[Timestamp]`: Accurate down to milliseconds.
+- `>>LoggerName<<`: Helps isolate which module emitted the log (e.g. `MAIN_APP`, `DB_WORKER`).
+- `(filename.py::ClassName::methodName->lineNumber)`: The exact code location. No more guessing where the error originated.
+- `- *LEVEL* -`: The severity (`INFO`, `ERROR`, etc.).
+- `message::> [Payload]`: The actual log message or serialized JSON object.
 
 ### 2. Analytical Event Logging (Telemetry)
 Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventType` and `EventStatus` enums to ensure consistency across your organization. Just like the debugger, Telemetry automatically injects creation timestamps and routing headers behind the scenes.
@@ -164,6 +181,28 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf event add-status <Type> <Status>`| Adds a new `EventStatus` specifically under an `EventType`. |
+
+### Powerful CLI Examples
+
+**1. Decoding Binary Telemetry:**
+Extract thousands of binary events into readable JSON for analysis.
+```bash
+# Output binary telemetry data as human-readable JSON
+loggerbuf decode-logs logs/telemetry_queue.bin
+
+# Decode directly to a JSONL file for database ingestion
+loggerbuf decode-logs logs/telemetry_queue.bin --out output.jsonl
+```
+
+**2. Exploring Debug History:**
+Search through gigabytes of Gzip or JSON operational logs effortlessly using our built-in explorer.
+```bash
+# Search for 'CRITICAL' in a compressed archive and return the last 20 matches
+loggerbuf decode-debug logs/history/debug_logs.gz --grep "CRITICAL" --tail 20
+
+# View the first 50 logs of a standard JSON log file
+loggerbuf decode-debug logs/history/debug_logs.json --head 50
+```
 
 ### Sub-classifying Events (EventType & EventStatus)
 To achieve granular analytics, LoggerBuf allows you to define a hierarchy of sub-classifications (**EventType**) and their respective states (**EventStatus**). 
