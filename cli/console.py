@@ -197,25 +197,47 @@ def list_cmd(type_name):
 @click.argument('key')
 @click.argument('value')
 def set(key, value):
-    """Sets a configuration value in loggerbuf.json."""
-    config_manager = ConfigManager()
-    
-    # Try casting value to int or bool if applicable
-    if value.lower() in ('true', 'false'):
-        parsed_value = value.lower() == 'true'
-    elif value.isdigit():
-        parsed_value = int(value)
-    else:
-        parsed_value = value
+    """Sets a global configuration key to a specific value."""
+    try:
+        # Convert value to its proper type
+        if value.lower() in ("true", "false"):
+            value = value.lower() == "true"
+        elif value.isdigit():
+            value = int(value)
+        elif value.startswith("[") and value.endswith("]"):
+            import json
+            value = json.loads(value.replace("'", '"'))
         
-    config_manager.set(key, parsed_value)
-    
-    click.echo(f"Saved: {key} = {parsed_value}")
-    
-    if key == "LOG_LEVEL":
-        click.secho("The ConfigWatcher will hot-reload this setting in ~5 seconds without restarting the app.", fg="green")
-    else:
-        click.secho(f"Warning: Modifying '{key}' requires manually restarting your application to take effect.", fg="yellow")
+        config_mgr = ConfigManager()
+        config_mgr.set(key, value)
+        click.secho(f"Updated {key} = {value}", fg="green")
+        
+        if key == "LOG_LEVEL":
+            click.secho("The ConfigWatcher will hot-reload this setting in ~5 seconds without restarting the app.", fg="green")
+        else:
+            click.secho(f"Warning: Modifying '{key}' requires manually restarting your application to take effect.", fg="yellow")
+
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
+@config.command()
+@click.argument('key')
+def reset(key):
+    """Resets a configuration key to its global default."""
+    try:
+        config_mgr = ConfigManager()
+        # Verify it exists in our live config before trying to remove
+        if key not in config_mgr._config:
+            click.secho(f"Key '{key}' is not explicitly set, already using default.", fg="yellow")
+            sys.exit(0)
+            
+        config_mgr.remove(key)
+        new_val = config_mgr.get(key)
+        click.secho(f"Reset {key} to default: {new_val}", fg="green")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
 
 @config.command()
 @click.argument('key')

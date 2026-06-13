@@ -43,5 +43,13 @@ class TestConfig(unittest.TestCase):
         config.load()
         self.assertEqual(config.get('TEST_VAL'), 456)
 
+    def test_config_remove(self):
+        config = ConfigManager()
+        config.set('LOG_LEVEL', 'CRITICAL')
+        self.assertEqual(config.get('LOG_LEVEL'), 'CRITICAL')
+        
+        config.remove('LOG_LEVEL')
+        self.assertEqual(config.get('LOG_LEVEL'), 'DEBUG') # Default from DEFAULT_CONFIG
+
 if __name__ == '__main__':
     unittest.main()

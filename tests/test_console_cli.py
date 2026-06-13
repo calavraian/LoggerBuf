@@ -154,7 +154,7 @@ def test_config_set_get(mock_cm_class, runner):
     
     result = runner.invoke(cli, ['config', 'set', 'LOG_LEVEL', 'DEBUG'])
     assert result.exit_code == 0
-    assert "Saved: LOG_LEVEL = DEBUG" in result.output
+    assert "Updated LOG_LEVEL = DEBUG" in result.output
     mock_cm.set.assert_called_once_with('LOG_LEVEL', 'DEBUG')
     
     # Test casting
@@ -175,6 +175,22 @@ def test_config_get_not_found(mock_cm_class, runner):
     result = runner.invoke(cli, ['config', 'get', 'INVALID'])
     assert result.exit_code == 0
     assert "not found" in result.output
+
+@patch('cli.console.ConfigManager')
+def test_config_reset(mock_cm_class, runner):
+    mock_cm = MagicMock()
+    mock_cm_class.return_value = mock_cm
+    mock_cm._config = {'TEST_KEY': 'some_val'}
+    mock_cm.get.return_value = 'default_val'
+    
+    result = runner.invoke(cli, ['config', 'reset', 'TEST_KEY'])
+    assert result.exit_code == 0
+    assert "Reset TEST_KEY to default: default_val" in result.output
+    mock_cm.remove.assert_called_once_with('TEST_KEY')
+    
+    result = runner.invoke(cli, ['config', 'reset', 'NOT_SET'])
+    assert result.exit_code == 0
+    assert "already using default" in result.output
 
 @patch('cli.console.events')
 def test_event_commands(mock_events, runner):

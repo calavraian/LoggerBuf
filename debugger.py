@@ -327,14 +327,12 @@ class DebuggerLog:
                 config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_CLASSES, self._on_console_config_change)
                 config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_ALLOWED_LEVELS, self._on_console_config_change)
                 config_manager.subscribe(ConfigKey.LOGGING_METADATA, self._on_metadata_change)
+                config_manager.subscribe(ConfigKey.LOGGING_CONSOLE_METADATA, self._on_console_metadata_change)
             else:
                 self.__settings = DebuggerLog.__loggers[name][0]
 
 
-    def __get_log_format(self):
-        config = ConfigManager()
-        fields = config.get(ConfigKey.LOGGING_METADATA, [e.value for e in LogMetadata])
-        
+    def __get_log_format(self, fields):
         parts = []
         if LogMetadata.TIMESTAMP.value in fields:
             parts.append('[{asctime}]')
@@ -383,7 +381,17 @@ class DebuggerLog:
             listener = DebuggerLog.__listeners[name]
             for handler in listener.handlers:
                 is_json = isinstance(handler, SizedTimedRotatingFileHandler)
-                self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
+                if is_json:
+                    self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
+
+    def _on_console_metadata_change(self, new_metadata):
+        name = self.__settings.get_name()
+        if name in DebuggerLog.__listeners:
+            listener = DebuggerLog.__listeners[name]
+            for handler in listener.handlers:
+                is_json = isinstance(handler, SizedTimedRotatingFileHandler)
+                if not is_json:
+                    self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
 
     def _on_log_level_change(self, new_level_str):
         """Called by ConfigManager when LOG_LEVEL changes."""
@@ -446,11 +454,12 @@ class DebuggerLog:
 
     def __config_handler(self, handler, logLevel, rotator=False, is_json=False):
         config = ConfigManager()
-        fields = config.get(ConfigKey.LOGGING_METADATA, [e.value for e in LogMetadata])
         if is_json:
+            fields = config.get(ConfigKey.LOGGING_METADATA, [e.value for e in LogMetadata])
             log_formatter = JsonFormatter(metadata_fields=fields)
         else:
-            log_formatter = logging.Formatter(self.__get_log_format(), style='{')
+            fields = config.get(ConfigKey.LOGGING_CONSOLE_METADATA, [e.value for e in LogMetadata])
+            log_formatter = logging.Formatter(self.__get_log_format(fields), style='{')
         handler.setFormatter(log_formatter)
         handler.setLevel(logLevel)
         if rotator:

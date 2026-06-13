@@ -54,11 +54,15 @@ LoggerBuf gives you complete control over where logs are sent. Persistence is in
 *(If a misconfiguration occurs, LoggerBuf will safely fallback to `CONSOLE` to ensure you never lose a trace).*
 
 ### 3. Configurable Metadata
-By default, the debugger tracks timestamp, logger name, log level, file name, class, function, and line number. You can customize exactly which metadata fields are included in both the JSON file logs and the console output using the `LOGGING_METADATA` key in your configuration:
+By default, the debugger tracks timestamp, logger name, log level, file name, class, function, and line number. You can customize exactly which metadata fields are included in both the JSON file logs and the console output using two distinct keys in your configuration:
+- `LOGGING_METADATA`: Controls what gets saved to disk (JSON/Gzip).
+- `LOGGING_CONSOLE_METADATA`: Controls what is printed on the screen.
+
 ```json
-"LOGGING_METADATA": ["TIMESTAMP", "LEVEL", "MESSAGE"]
+"LOGGING_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "MESSAGE"],
+"LOGGING_CONSOLE_METADATA": ["LEVEL", "MESSAGE"]
 ```
-This reduces storage costs and visual noise if you don't need full tracking.
+This reduces storage costs and visual noise if you don't need full tracking, and gives you separate controls for what you save versus what you see.
 
 ### 4. Complex Object Serialization
 You can pass dictionaries, lists, or custom class instances directly to the logger. LoggerBuf will safely intercept and serialize them to formatted JSON (with a silent fail-safe if an object is unserializable), keeping your code perfectly clean:
@@ -178,6 +182,7 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf build` | Runs the Schema Linter and compiles `.proto` files to Python. |
 | `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Retrieves the active value for a configuration key. |
+| `loggerbuf config reset <key>` | Resets a configuration key to its global default value. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf event add-status <Type> <Status>`| Adds a new `EventStatus` specifically under an `EventType`. |

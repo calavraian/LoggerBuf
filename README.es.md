@@ -54,7 +54,15 @@ Puedes configurar qué ver en consola dinámicamente mediante `loggerbuf.json`:
 - `LOGGING_CONSOLE_ALLOWED_LEVELS`: Lista de niveles a mostrar (ej. `["ERROR"]`).
 
 ### 2. Metadatos Configurables
-Controla qué campos de rastreo (timestamp, archivo, clase, línea) se guardan usando `LOGGING_METADATA` en tu configuración.
+Controla exactamente qué campos de rastreo (timestamp, logger, nivel, archivo, clase, función, línea) se incluyen tanto en los logs de archivo JSON como en la salida de consola usando dos claves distintas en tu configuración:
+- `LOGGING_METADATA`: Controla lo que se guarda en disco (JSON/Gzip).
+- `LOGGING_CONSOLE_METADATA`: Controla lo que se imprime en la pantalla.
+
+```json
+"LOGGING_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "MESSAGE"],
+"LOGGING_CONSOLE_METADATA": ["LEVEL", "MESSAGE"]
+```
+Esto reduce los costos de almacenamiento y el ruido visual si no necesitas un seguimiento completo, y te brinda controles separados para lo que guardas y lo que ves.
 
 ### 3. Destino y Persistencia (History On/Off)
 Tienes control absoluto sobre dónde van tus logs. La persistencia en disco no es forzosa. Configura `LOGGING_DESTINATION` con 5 modos:
@@ -161,6 +169,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf build` | Ejecuta el Schema Linter y compila los `.proto` a Python. |
 | `loggerbuf config set <key> <value>` | Actualiza la configuración global. Ejemplo: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Consulta un valor de configuración global. |
+| `loggerbuf config reset <key>` | Restaura una clave de configuración a su valor predeterminado global. |
 | `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |

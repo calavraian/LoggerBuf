@@ -20,6 +20,7 @@ class ConfigKey(str, Enum):
     LOGGING_CONSOLE_ALLOWED_CLASSES = "LOGGING_CONSOLE_ALLOWED_CLASSES"
     LOGGING_CONSOLE_ALLOWED_LEVELS = "LOGGING_CONSOLE_ALLOWED_LEVELS"
     LOGGING_METADATA = "LOGGING_METADATA"
+    LOGGING_CONSOLE_METADATA = "LOGGING_CONSOLE_METADATA"
     LOGGING_DESTINATION = "LOGGING_DESTINATION"
 
     EVENT_BASE_DIR = "EVENT_BASE_DIR"
@@ -69,7 +70,8 @@ DEFAULT_CONFIG = {
     "LOGGING_CONSOLE_ENABLED": True,
     "LOGGING_CONSOLE_ALLOWED_CLASSES": [],
     "LOGGING_CONSOLE_ALLOWED_LEVELS": [],
-    "LOGGING_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "FILE", "CLASS", "FUNCTION", "LINE"]
+    "LOGGING_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "FILE", "CLASS", "FUNCTION", "LINE"],
+    "LOGGING_CONSOLE_METADATA": ["TIMESTAMP", "LOGGER", "LEVEL", "FILE", "CLASS", "FUNCTION", "LINE"]
 }
 
 class ConfigManager:
@@ -123,6 +125,19 @@ class ConfigManager:
         
         if changed:
             self._notify(key, value)
+
+    def remove(self, key):
+        if isinstance(key, Enum):
+            key = key.value
+        changed = False
+        with self._lock:
+            if key in self._config:
+                del self._config[key]
+                self.save()
+                changed = True
+        
+        if changed:
+            self._notify(key, self.get(key))
 
     def save(self):
         try:
