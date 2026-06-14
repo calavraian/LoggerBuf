@@ -213,6 +213,22 @@ loggerbuf event list
 ```
 *¡No olvides ejecutar `loggerbuf build` para compilar los cambios hechos por estos comandos!*
 
+### 🏗️ Pruebas de Estrés y Monitoreo de Recursos
+LoggerBuf incluye una suite de pruebas de estrés concurrente incorporada, diseñada para evaluar el rendimiento del sistema bajo cargas extremas. Este comando evalúa tanto el rendimiento del disco como la estabilidad de la cola simulando escenarios del mundo real.
+
+```bash
+loggerbuf stress-test --threads 10 --writes 50000 --duration 60 --queue-size 10000 --strategy lossy
+```
+
+**Parámetros Clave:**
+* `--threads`: Número de hilos concurrentes generando logs.
+* `--writes`: Número **Total** de logs a generar entre todos los hilos.
+* `--duration`: Esparce la generación de logs en un tiempo objetivo en segundos. Por ejemplo, 50,000 writes en 10 hilos durante 60 segundos calculará los retrasos exactos en milisegundos (`time.sleep`) por hilo para simular un tráfico sostenido y realista en lugar de una ráfaga inmediata. Usa `0` para una prueba de ráfaga a máxima velocidad.
+* `--queue-size` / `--strategy`: Sobrescribe temporalmente las colas de eventos internos para la duración de la prueba.
+* `--keep-logs`: Por defecto, el sistema ejecuta la prueba en un directorio temporal aislado `logs/stress_test/` y lo elimina al finalizar para ahorrar espacio en disco. Pasa `--keep-logs` si deseas inspeccionar los archivos generados. *Nota: Iniciar una nueva prueba siempre borrará el directorio de la prueba anterior para asegurar resultados limpios.*
+
+Al final de la prueba, LoggerBuf imprime un detallado **Tablero de Métricas de Telemetría** junto con un resumen de **Recursos del Sistema** que incluye el pico de CPU, pico de RAM (monitoreado vía `psutil`) y el espacio total en Disco consumido por los logs de prueba.
+
 ### 🛡️ Evolución de Esquemas (Las Reglas de Oro)
 Debido a que la telemetría se almacena en binario, **nunca debes eliminar un campo ni cambiar su tipo de dato**.
 `loggerbuf build` incluye un **Schema Linter** que compara tus archivos con una instantánea histórica y bloquea cualquier cambio destructivo.

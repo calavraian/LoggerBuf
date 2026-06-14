@@ -29,5 +29,14 @@
         "CLASS",
         "FUNCTION",
         "LINE"
+    ],
+    "LOGGING_CONSOLE_METADATA": [
+        "TIMESTAMP",
+        "LOGGER",
+        "LEVEL",
+        "FILE",
+        "CLASS",
+        "FUNCTION",
+        "LINE"
     ]
 }

@@ -251,11 +251,30 @@ def get(key):
         click.secho(f"Key '{key}' not found in config or defaults.", fg="red")
 
 @cli.command()
-@click.option('--threads', default=10, help="Number of concurrent threads.")
-@click.option('--writes', default=200, help="Writes per thread.")
-def stress_test(threads, writes):
-    """Runs a performance stress test on LoggerBuf."""
-    stress.run_stress_test(threads, writes)
+@click.option('--threads', type=int, help="Number of concurrent threads. Overrides config.")
+@click.option('--writes', type=int, help="Total number of writes across all threads. Overrides config.")
+@click.option('--duration', type=int, help="Target duration in seconds to pace the traffic. 0 for burst. Overrides config.")
+@click.option('--queue-size', type=int, help="Max queue capacity. Overrides config.")
+@click.option('--strategy', type=click.Choice(['lossless', 'lossy'], case_sensitive=False), help="Queue strategy. Overrides config.")
+@click.option('--keep-logs', is_flag=True, default=False, help="Do not delete the stress test log directory at the end.")
+def stress_test(threads, writes, duration, queue_size, strategy, keep_logs):
+    """Runs a performance stress test on LoggerBuf with resource monitoring."""
+    config_manager = ConfigManager()
+    
+    threads = threads if threads is not None else config_manager.get('STRESS_TEST_THREADS', 10)
+    writes = writes if writes is not None else config_manager.get('STRESS_TEST_WRITES', 10000)
+    duration = duration if duration is not None else config_manager.get('STRESS_TEST_DURATION', 0)
+    queue_size = queue_size if queue_size is not None else config_manager.get('LOGGING_QUEUE_MAX_SIZE')
+    strategy = strategy if strategy is not None else config_manager.get('LOGGING_QUEUE_STRATEGY')
+    
+    stress.run_stress_test(
+        num_threads=threads, 
+        total_writes=writes, 
+        duration=duration,
+        queue_size=queue_size, 
+        strategy=strategy.upper(),
+        keep_logs=keep_logs
+    )
 
 if __name__ == '__main__':
     cli()

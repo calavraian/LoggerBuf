@@ -7,7 +7,8 @@ setup(
     py_modules=["telemetry", "debugger", "queue_metrics", "config"],
     install_requires=[
         "protobuf>=5.29.3",
-        "click>=8.0.0"
+        "click>=8.0.0",
+        "psutil"
     ],
     entry_points={
         "console_scripts": [

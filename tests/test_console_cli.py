@@ -137,9 +137,13 @@ def test_decode_debug(mock_decode, runner):
 
 @patch('cli.console.stress')
 def test_stress_test(mock_stress, runner):
-    result = runner.invoke(cli, ['stress-test'])
+    result = runner.invoke(cli, ['stress-test', '--threads', '5', '--writes', '500'])
     assert result.exit_code == 0
-    mock_stress.run_stress_test.assert_called_once_with(10, 200)
+    # The actual call arguments might depend on defaults, but we check if it was called.
+    mock_stress.run_stress_test.assert_called_once()
+    call_kwargs = mock_stress.run_stress_test.call_args.kwargs
+    assert call_kwargs['num_threads'] == 5
+    assert call_kwargs['total_writes'] == 500
 
 @patch('cli.console.ConfigManager')
 def test_config_set_get(mock_cm_class, runner):

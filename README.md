@@ -226,6 +226,22 @@ loggerbuf event list
 *Don't forget to run `loggerbuf build` to compile the changes made by these commands!*
 | `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 
+### 🏗️ Stress Testing & Resource Monitoring
+LoggerBuf includes a built-in concurrent stress testing suite designed to evaluate system performance under extreme logging loads. This command evaluates both disk throughput and queue stability, simulating real-world scenarios.
+
+```bash
+loggerbuf stress-test --threads 10 --writes 50000 --duration 60 --queue-size 10000 --strategy lossy
+```
+
+**Key Parameters:**
+* `--threads`: Number of concurrent threads generating logs.
+* `--writes`: **Total** number of logs to generate across all threads.
+* `--duration`: Spreads the log generation over a target time in seconds. For example, 50,000 writes across 10 threads in 60 seconds will calculate exact millisecond delays (`time.sleep`) per thread to simulate a sustained, realistic traffic load instead of an immediate burst. Use `0` for maximum speed burst testing.
+* `--queue-size` / `--strategy`: Temporarily overrides the internal event queues for the duration of the test.
+* `--keep-logs`: By default, the system runs the test in a temporary isolated `logs/stress_test/` directory and deletes it upon completion to save your disk space. Pass `--keep-logs` to inspect the generated test files. *Note: Running a new test will always clear the previous test's directory.*
+
+At the end of the test, LoggerBuf outputs a detailed **Telemetry Queue Metrics Dashboard** along with a **System Resources** summary including Peak CPU, Peak RAM (monitored via `psutil`), and total Disk Space consumed by the test logs.
+
 ### 🛡️ Schema Evolution (The Golden Rules)
 Because telemetry is stored in binary, **never delete a field or change its data type**. 
 `loggerbuf build` includes a **Schema Linter** that compares your files against a historical snapshot and blocks destructive changes. 
