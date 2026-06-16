@@ -69,8 +69,8 @@ def decode_file(filepath, verify_key=None, skip_integrity=False):
                         expected_hash = hmac.new(verify_key.encode('utf-8'), clean_payload + prev, hashlib.sha256).digest()
                         
                         if expected_hash != stored_sig:
-                            click.secho(f"\n[!] ALERTA CRITICA: Integridad Comprometida en el Evento #{event_index} (offset {f.tell() - size})", fg='red', err=True)
-                            click.secho(f"    La firma calculada no coincide con la firma almacenada.", fg='red', err=True)
+                            click.secho(f"\n[!] CRITICAL ALERT: Integrity Compromised at Event #{event_index} (offset {f.tell() - size})", fg='red', err=True)
+                            click.secho(f"    Calculated signature does not match stored signature.", fg='red', err=True)
                         
                         # Update running hash
                         current_hash = stored_sig

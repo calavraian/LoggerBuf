@@ -85,7 +85,7 @@ When enabled via `HMAC_SECRET_KEY` in `loggerbuf.json`, every binary telemetry e
 *   **Chained Hashes**: Each event's signature is calculated based on its payload *plus the signature of the previous event*. This forms a cryptographic chain.
 *   **File-Level Continuity**: When a file rotates, the last hash is carried over to the new file (`previous_file_hash`). You can verify intermediate files without needing the entire history.
 *   **Tamper-Evident**: If an attacker alters a single byte of a past event (or reorders events), the signature of that event and all subsequent events will be invalidated.
-*   **Verification**: The `decode-logs` CLI tool automatically verifies signatures if a key is present, instantly halting and emitting a `[!] ALERTA CRITICA` if it detects compromised integrity. (You can bypass this with `--skip-integrity` or provide the key manually via `--verify-key`).
+*   **Verification**: The `decode-logs` CLI tool automatically verifies signatures if a key is present, instantly halting and emitting a `[!] CRITICAL ALERT` if it detects compromised integrity. (You can bypass this with `--skip-integrity` or provide the key manually via `--verify-key`).
 
 ---
 
