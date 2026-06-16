@@ -128,13 +128,18 @@ def deprecate_subfield(message_name, field_name, file):
 @click.option('--stats', is_flag=True, help="Show only statistics.")
 @click.option('--head', type=int, help="First N records.")
 @click.option('--tail', type=int, help="Last N records.")
-def decode_logs(input_file, output, format, stats, head, tail):
+@click.option('--verify-key', help="Provide the HMAC Secret Key manually if not in loggerbuf.json.")
+@click.option('--skip-integrity', is_flag=True, default=False, help="Skip cryptographic validation even if the file is signed.")
+def decode_logs(input_file, output, format, stats, head, tail, verify_key, skip_integrity):
     """Decodes binary telemetry files to JSON."""
     if head and tail:
         click.secho("You cannot use --head and --tail together.", fg="red")
         sys.exit(1)
+        
+    config = ConfigManager()
+    active_key = verify_key if verify_key else config.get('HMAC_SECRET_KEY')
     
-    decode.run_decode(input_file, output, format, stats, head, tail)
+    decode.run_decode(input_file, output, format, stats, head, tail, active_key, skip_integrity)
 
 @cli.command()
 @click.argument('input_file')

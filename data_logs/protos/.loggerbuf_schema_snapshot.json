@@ -64,6 +64,18 @@
         "9": {
           "name": "caller_function",
           "type": 9
+        },
+        "9997": {
+          "name": "previous_file_hash",
+          "type": 12
+        },
+        "9998": {
+          "name": "is_chain_start",
+          "type": 8
+        },
+        "9999": {
+          "name": "hmac_signature",
+          "type": 12
         }
       }
     }

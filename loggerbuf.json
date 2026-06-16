@@ -38,5 +38,6 @@
         "CLASS",
         "FUNCTION",
         "LINE"
-    ]
+    ],
+    "HMAC_SECRET_KEY": "super_secret_test_key"
 }

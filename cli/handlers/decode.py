@@ -10,7 +10,7 @@ try:
 except ImportError:
     main_data_pb2 = None
 
-def decode_file(filepath):
+def decode_file(filepath, verify_key=None, skip_integrity=False):
     """
     Reads a length-prefixed binary log file (raw or gzipped)
     and yields deserialized main_data_pb2.Event objects.
@@ -23,32 +23,69 @@ def decode_file(filepath):
 
     open_func = gzip.open if filepath.endswith('.gz') else open
     
+    import hmac
+    import hashlib
+    import click
+
+    current_hash = None
+    event_index = 0
+
     with open_func(filepath, 'rb') as f:
         while True:
             header = f.read(4)
             if not header:
                 break
             if len(header) < 4:
-                print(f"Warning: Truncated header found in {filepath} at position {f.tell() - len(header)}", file=sys.stderr)
+                click.secho(f"Warning: Truncated header found in {filepath} at position {f.tell() - len(header)}", fg='red', err=True)
                 break
             
             size = int.from_bytes(header, byteorder='big')
             payload = f.read(size)
             if len(payload) < size:
-                print(f"Warning: Truncated payload of size {size} in {filepath}", file=sys.stderr)
+                click.secho(f"Warning: Truncated payload of size {size} in {filepath}", fg='red', err=True)
                 break
+            
+            event_index += 1
             
             try:
                 event = main_data_pb2.Event.FromString(payload)
+                
+                # --- HMAC Verification ---
+                if not skip_integrity and verify_key:
+                    if event.hmac_signature:
+                        stored_sig = event.hmac_signature
+                        
+                        # Prepare payload for hash
+                        event.ClearField("hmac_signature")
+                        
+                        if event.is_chain_start:
+                            # Start of a new chain
+                            prev = event.previous_file_hash if event.previous_file_hash else b''
+                        else:
+                            prev = current_hash if current_hash else b''
+                            
+                        clean_payload = event.SerializeToString()
+                        
+                        expected_hash = hmac.new(verify_key.encode('utf-8'), clean_payload + prev, hashlib.sha256).digest()
+                        
+                        if expected_hash != stored_sig:
+                            click.secho(f"\n[!] ALERTA CRITICA: Integridad Comprometida en el Evento #{event_index} (offset {f.tell() - size})", fg='red', err=True)
+                            click.secho(f"    La firma calculada no coincide con la firma almacenada.", fg='red', err=True)
+                        
+                        # Update running hash
+                        current_hash = stored_sig
+                        # Restore signature for output consistency if needed
+                        event.hmac_signature = stored_sig
+
                 yield event
             except Exception as e:
-                print(f"Warning: Failed to deserialize event of size {size}: {e}", file=sys.stderr)
+                click.secho(f"Warning: Failed to deserialize event of size {size} at index {event_index}: {e}", fg='red', err=True)
 
-def run_decode(input_file: str, output_file: str, format: str, stats: bool, head: int, tail: int):
+def run_decode(input_file: str, output_file: str, format: str, stats: bool, head: int, tail: int, verify_key: str = None, skip_integrity: bool = False):
     """Main decoding logic separated from click."""
     
     try:
-        event_generator = decode_file(input_file)
+        event_generator = decode_file(input_file, verify_key, skip_integrity)
     except Exception as e:
         print(f"Error reading file: {e}", file=sys.stderr)
         sys.exit(1)

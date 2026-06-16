@@ -98,18 +98,21 @@ class BackgroundEventWriter:
         self.metrics = QueueMetrics()
         
         self.full_path_logs = self._get_full_path_logs()
-        config = ConfigManager()
         self.current_filename = os.path.join(self.full_path_logs, f"{config.get('EVENT_MAIN_FILE_NAME')}_{self.settings.get_name()}.log")
         
         self.file_lock = threading.Lock()
         self._file = None
+        
+        # HMAC Security
+        self.hmac_secret_key = config.get('HMAC_SECRET_KEY')
+        self._current_hash = None
+        self._needs_chain_start = True
         
         self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-TelemetryWorker", daemon=True)
         self.worker_thread.start()
         
         # Cache the date of the last record at startup
         self._cached_last_date = self._get_date_last_record()
-
 
     def _get_full_path_logs(self):
         logs_base_dir = self.settings.get_logs_base_dir() if self.settings.get_logs_base_dir() != "." else os.getcwd()
@@ -122,15 +125,12 @@ class BackgroundEventWriter:
         # Stamp timestamp on caller thread to represent when event actually happened
         event.timestamp = datetime.datetime.now().isoformat()
         
-        # Serialize to binary bytes on caller thread (fast & safe)
-        serialized_data = event.SerializeToString()
-        
         try:
             qsize = self.queue.qsize()
             if self.strategy == QueueStrategy.LOSSY:
-                self.queue.put_nowait(serialized_data)
+                self.queue.put_nowait(event)
             else:
-                self.queue.put(serialized_data)
+                self.queue.put(event)
             self.metrics.record_enqueue(qsize)
         except queue.Full:
             self.metrics.record_drop()
@@ -165,7 +165,7 @@ class BackgroundEventWriter:
                 print(f"Error in LoggerBuf telemetry worker thread: {e}")
 
 
-    def _write_record(self, data: bytes):
+    def _write_record(self, event: main_data_pb2.Event):
         with self.file_lock:
             # Check size and date rotation before writing
             self._check_rotation()
@@ -173,6 +173,41 @@ class BackgroundEventWriter:
             if not self._file or self._file.closed:
                 self._file = open(self.current_filename, 'ab')
                 
+            # --- HMAC Security Logic ---
+            if self.hmac_secret_key:
+                if self._needs_chain_start:
+                    event.is_chain_start = True
+                    if self._current_hash:
+                        event.previous_file_hash = self._current_hash
+                    self._needs_chain_start = False
+                else:
+                    event.is_chain_start = False
+                    event.ClearField("previous_file_hash")
+                
+                # Clear signature before calculating
+                event.ClearField("hmac_signature")
+                payload = event.SerializeToString()
+                
+                import hmac
+                import hashlib
+                prev = self._current_hash if self._current_hash else b''
+                new_hash = hmac.new(
+                    self.hmac_secret_key.encode('utf-8'),
+                    payload + prev,
+                    hashlib.sha256
+                ).digest()
+                
+                event.hmac_signature = new_hash
+                self._current_hash = new_hash
+            else:
+                # If no security enabled, ensure these are clear
+                event.ClearField("hmac_signature")
+                event.ClearField("previous_file_hash")
+                event.is_chain_start = False
+
+            # Serialize to binary bytes
+            data = event.SerializeToString()
+            
             # Write Length-Prefixed Frame
             # 4-byte big-endian integer representing message size, then the protobuf payload
             size = len(data)
@@ -204,6 +239,7 @@ class BackgroundEventWriter:
             
             self._do_rollover(current_date, last_date, "TIME" if should_rotate_time else "SIZE")
             self._cached_last_date = current_date
+            self._needs_chain_start = True
 
     def _get_date_last_record(self):
         if not os.path.exists(self.current_filename) or os.path.getsize(self.current_filename) == 0:

@@ -79,6 +79,14 @@ log.info(user_data)
     *   `LOSSLESS` (Telemetry): Briefly blocks if the queue is full, ensuring not a single analytics event is lost.
     *   `LOSSY` (Debugger): Silently discards the oldest logs if the disk is saturated, protecting your app's performance during extreme log bursts.
 
+### 🔒 Cryptographic Log Integrity (Tamper-Evident HMAC)
+For highly regulated environments or sensitive telemetry, LoggerBuf supports **Cryptographic Chaining**. 
+When enabled via `HMAC_SECRET_KEY` in `loggerbuf.json`, every binary telemetry event is cryptographically signed using `HMAC-SHA256`.
+*   **Chained Hashes**: Each event's signature is calculated based on its payload *plus the signature of the previous event*. This forms a cryptographic chain.
+*   **File-Level Continuity**: When a file rotates, the last hash is carried over to the new file (`previous_file_hash`). You can verify intermediate files without needing the entire history.
+*   **Tamper-Evident**: If an attacker alters a single byte of a past event (or reorders events), the signature of that event and all subsequent events will be invalidated.
+*   **Verification**: The `decode-logs` CLI tool automatically verifies signatures if a key is present, instantly halting and emitting a `[!] ALERTA CRITICA` if it detects compromised integrity. (You can bypass this with `--skip-integrity` or provide the key manually via `--verify-key`).
+
 ---
 
 ## 💻 Operational Guide (In the Trenches)
