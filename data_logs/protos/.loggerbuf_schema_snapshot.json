@@ -59,6 +59,18 @@
         "8": {
           "name": "lineno",
           "type": 5
+        },
+        "9997": {
+          "name": "previous_file_hash",
+          "type": 12
+        },
+        "9998": {
+          "name": "is_chain_start",
+          "type": 8
+        },
+        "9999": {
+          "name": "hmac_signature",
+          "type": 12
         }
       }
     },

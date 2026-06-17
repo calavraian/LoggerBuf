@@ -76,6 +76,16 @@ message CounterEvent {{
     string caller_class = 6;
     string caller_function = 7;
     int32 lineno = 8;
+    
+    // --- SECURITY & INTEGRITY ---
+    // The hash of the previous rotated file, used to link files in a sequence
+    bytes previous_file_hash = 9997;
+    
+    // Indicates if this event is the start of a new hash chain
+    bool is_chain_start = 9998;
+    
+    // The cryptographic signature (HMAC) for this event
+    bytes hmac_signature = 9999;
 }}
 """
 

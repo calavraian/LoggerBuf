@@ -108,16 +108,17 @@ class BaseBackgroundWriter:
                     self.queue.task_done()
                     break
                 
-                t0 = time.perf_counter()
-                self._write_record(data)
-                duration = time.perf_counter() - t0
-                
-                self.metrics.record_dequeue(duration, self.queue.qsize())
-                self.queue.task_done()
+                try:
+                    t0 = time.perf_counter()
+                    self._write_record(data)
+                    duration = time.perf_counter() - t0
+                    self.metrics.record_dequeue(duration, self.queue.qsize())
+                except Exception as e:
+                    print(f"Error in LoggerBuf telemetry worker thread: {e}")
+                finally:
+                    self.queue.task_done()
             except queue.Empty:
                 continue
-            except Exception as e:
-                print(f"Error in LoggerBuf telemetry worker thread: {e}")
 
     def _write_record(self, record):
         with self.file_lock:
