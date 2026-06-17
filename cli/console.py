@@ -168,6 +168,17 @@ def config():
     """Manage LoggerBuf global configurations (loggerbuf.json)."""
     pass
 
+@config.command()
+def init():
+    """Generates the default loggerbuf.json configuration file."""
+    from config import CONFIG_FILE
+    try:
+        config_mgr = ConfigManager()
+        click.secho(f"Configuration file '{CONFIG_FILE}' is ready.", fg="green")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
+
 @cli.group()
 def counter():
     """Manage Counter types."""

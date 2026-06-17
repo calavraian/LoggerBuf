@@ -10,6 +10,23 @@ Unlike traditional plain-text logging systems that choke under heavy loads and c
 
 ---
 
+## 🚀 Getting Started (Installation & Setup)
+
+**1. Installation:**
+Install LoggerBuf in your environment using pip:
+```bash
+pip install loggerbuf
+```
+
+**2. Initialize Configuration (Optional but Recommended):**
+To generate your `loggerbuf.json` file with the default values so you can easily view or edit it manually with your favorite editor, run:
+```bash
+loggerbuf config init
+```
+This will create the file in your current directory, allowing you to easily adjust paths, log levels, and behaviors.
+
+---
+
 ## 🤔 Why LoggerBuf? (The Problem & The Solution)
 
 **The Problem:** 
