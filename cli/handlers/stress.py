@@ -52,7 +52,7 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
     Runs a heavy concurrent stress test for LoggerBuf with resource monitoring.
     """
     try:
-        from data_logs import main_data_pb2, event_status_pb2
+        from data_logs import Event, EventType, EventStatus
         from debugger import DebuggerLog, StreamLevel, LoggerSettings
         from telemetry import TelemetryLog, EventSettings
         from config import ConfigManager
@@ -115,10 +115,10 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
             for i in range(writes_per_thread):
                 logger.debug(f"Thread-{thread_id} operational log #{i}")
                 
-                event = main_data_pb2.Event()
-                event.event_type = event_status_pb2.EventType.EVENT_GENERIC
+                event = Event()
+                event.event_type = EventType.EVENT_GENERIC
                 event.general_note = f"Concurrent stress test event {i} from Thread-{thread_id}"
-                event.status = event_status_pb2.EventStatus.STATUS_ACTIVE
+                event.status = EventStatus.STATUS_ACTIVE
                 eventLogger.create_event(event)
                 
                 if delay_per_write >= 0.001:

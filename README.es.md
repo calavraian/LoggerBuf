@@ -108,14 +108,14 @@ La Telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usan
 
 ```python
 from telemetry import TelemetryLog
-from data_logs import Event, EventTypes, EventStatus
+from data_logs import Event, EventType, EventStatus
 
 # 1. Initialize Logger
 telemetry = TelemetryLog("MAIN")
 
 # 2. Create and populate Event
 event = Event()
-event.event_type = EventTypes.EVENT_DATA_BASE_PROCESSING
+event.event_type = EventType.EVENT_DATA_BASE_PROCESSING
 event.general_note = "Usuario registrado exitosamente"
 event.status = EventStatus.STATUS_COMPLETED
 

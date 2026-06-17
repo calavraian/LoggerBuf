@@ -120,7 +120,7 @@ def test_deprecate_subfield(mock_fields, runner):
 def test_decode_logs(mock_decode, runner):
     result = runner.invoke(cli, ['decode-logs', 'file.bin'])
     assert result.exit_code == 0
-    mock_decode.run_decode.assert_called_once_with('file.bin', None, 'jsonl', False, None, None)
+    mock_decode.run_decode.assert_called_once_with('file.bin', None, 'jsonl', False, None, None, None, False)
 
 @patch('cli.console.decode')
 def test_decode_logs_head_tail_conflict(mock_decode, runner):

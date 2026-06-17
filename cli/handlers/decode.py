@@ -6,17 +6,17 @@ import re
 from google.protobuf.json_format import MessageToDict
 
 try:
-    from data_logs import main_data_pb2
+    from data_logs import Event
 except ImportError:
-    main_data_pb2 = None
+    Event = None
 
 def decode_file(filepath, verify_key=None, skip_integrity=False):
     """
     Reads a length-prefixed binary log file (raw or gzipped)
-    and yields deserialized main_data_pb2.Event objects.
+    and yields deserialized Event objects.
     """
-    if not main_data_pb2:
-        raise ImportError("main_data_pb2 is not available. Please run 'loggerbuf build' first.")
+    if not Event:
+        raise ImportError("Event class is not available. Please run 'loggerbuf build' first.")
         
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
@@ -48,7 +48,7 @@ def decode_file(filepath, verify_key=None, skip_integrity=False):
             event_index += 1
             
             try:
-                event = main_data_pb2.Event.FromString(payload)
+                event = Event.FromString(payload)
                 
                 # --- HMAC Verification ---
                 if not skip_integrity and verify_key:
