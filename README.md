@@ -118,15 +118,17 @@ The custom formatter instantly reveals the *where* and *what* of any log entry w
 Telemetry uses Protobuf. Every event you track should be categorized using your custom `EventType` and `EventStatus` enums to ensure consistency across your organization. Just like the debugger, Telemetry automatically injects creation timestamps and routing headers behind the scenes.
 
 ```python
-from data_logs import main_data_pb2, event_status_pb2
+from telemetry import TelemetryLog
+from data_logs import Event, EventTypes, EventStatus
 
-telemetry = loggerbuf.create_telemetry()
+# 1. Initialize Logger
+telemetry = TelemetryLog("MAIN")
 
-# Create your structured event
-event = main_data_pb2.Event()
-event.event_type = event_status_pb2.EventTypes.EVENT_DATA_BASE_PROCESSING
+# 2. Create and populate Event
+event = Event()
+event.event_type = EventTypes.EVENT_DATA_BASE_PROCESSING
 event.general_note = "User successfully registered"
-event.status = event_status_pb2.Status.STATUS_COMPLETED
+event.status = EventStatus.STATUS_COMPLETED
 
 # Send it to the async binary queue
 telemetry.send(event)

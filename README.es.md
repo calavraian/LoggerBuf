@@ -107,15 +107,17 @@ Nuestro formateador revela al instante el *dónde* y el *qué* de cualquier regi
 La Telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usando tus enums personalizados `EventType` y `EventStatus` para asegurar la consistencia. Al igual que el debugger, la Telemetría inyecta automáticamente las marcas de tiempo y el enrutamiento. tras bambalinas.
 
 ```python
-from data_logs import main_data_pb2, event_status_pb2
+from telemetry import TelemetryLog
+from data_logs import Event, EventTypes, EventStatus
 
-telemetry = loggerbuf.create_telemetry()
+# 1. Initialize Logger
+telemetry = TelemetryLog("MAIN")
 
-# Crea tu evento estructurado
-event = main_data_pb2.Event()
-event.event_type = event_status_pb2.EventTypes.EVENT_DATA_BASE_PROCESSING
+# 2. Create and populate Event
+event = Event()
+event.event_type = EventTypes.EVENT_DATA_BASE_PROCESSING
 event.general_note = "Usuario registrado exitosamente"
-event.status = event_status_pb2.Status.STATUS_COMPLETED
+event.status = EventStatus.STATUS_COMPLETED
 
 # Envíalo a la cola binaria asíncrona
 telemetry.send(event)

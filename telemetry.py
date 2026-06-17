@@ -6,7 +6,7 @@ import threading
 import time
 from config import ConfigManager, QueueStrategy, ConfigKey
 
-from data_logs import main_data_pb2
+from data_logs import Event
 from queue_metrics import QueueMetrics, MetricField
 
 class EventSettings:
@@ -121,7 +121,7 @@ class BackgroundEventWriter:
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 
-    def write_event(self, event: main_data_pb2.Event):
+    def write_event(self, event: Event):
         # Stamp timestamp on caller thread to represent when event actually happened
         event.timestamp = datetime.datetime.now().isoformat()
         
@@ -165,7 +165,7 @@ class BackgroundEventWriter:
                 print(f"Error in LoggerBuf telemetry worker thread: {e}")
 
 
-    def _write_record(self, event: main_data_pb2.Event):
+    def _write_record(self, event: Event):
         with self.file_lock:
             # Check size and date rotation before writing
             self._check_rotation()
@@ -281,7 +281,7 @@ class BackgroundEventWriter:
                     seek_back = min(seek_back * 2, position)
                 
                 if last_event_bytes:
-                    event = main_data_pb2.Event.FromString(last_event_bytes)
+                    event = Event.FromString(last_event_bytes)
                     return datetime.datetime.strptime(event.timestamp[:10], "%Y-%m-%d").date()
         except Exception as e:
             print(f"Error reading last telemetry date: {e}")
@@ -328,7 +328,7 @@ class TelemetryLog:
                 self.__settings = TelemetryLog.__instances[name][0]
                 self.__writer = TelemetryLog.__instances[name][1]
 
-    def create_event(self, event: main_data_pb2.Event):
+    def create_event(self, event: Event):
         # Extract caller information
         import sys
         try:
