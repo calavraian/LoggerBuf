@@ -134,6 +134,26 @@ event.status = EventStatus.STATUS_COMPLETED
 telemetry.send(event)
 ```
 
+### 2.1 Simple Metrics (Counters)
+Sometimes a complex event is overkill. If you just want to count occurrences (e.g. "login attempts", "database errors"), you can use the parallel Counters pipeline. This pipeline is **disabled by default** to save resources and avoid starting a second background thread. You must explicitly enable it in `loggerbuf.json` by setting `"METRICS_ENABLED": true`.
+
+Counters maintain a segregated pipeline (using their own file under `logs_base_dir/counters`), so they never mix metrics with your main events:
+
+```python
+from telemetry import TelemetryLog
+from data_logs import CounterType
+
+telemetry = TelemetryLog("MAIN")
+
+# Increment a counter (async, extremely lightweight)
+# If METRICS_ENABLED is false, this call is silently discarded without consuming resources.
+telemetry.increment(CounterType.COUNTER_LOGIN_ATTEMPTS)
+
+# You can also increment in batches
+telemetry.increment(CounterType.COUNTER_API_CALLS, value=10)
+```
+To view your counters, use the CLI tool: `loggerbuf decode-logs <File> --counters`
+
 ---
 
 ## 🎛️ Absolute Control (Advanced Configuration)
@@ -196,6 +216,8 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf event add-status <Type> <Status>`| Adds a new `EventStatus` specifically under an `EventType`. |
+| `loggerbuf add-counter-type <Type>` | Adds a new counter type to your `registry.proto`. Supports ranges via `--start` and `--end`. |
+| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 
 ### Powerful CLI Examples
 

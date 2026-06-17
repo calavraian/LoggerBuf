@@ -123,6 +123,26 @@ event.status = EventStatus.STATUS_COMPLETED
 telemetry.send(event)
 ```
 
+### 2.1 Métricas Simples (Contadores)
+A veces un evento complejo es demasiado para lo que necesitas. Si solo deseas contar eventos (por ejemplo: "intentos de login", "errores de base de datos"), puedes usar el pipeline paralelo de Contadores. Este pipeline está **apagado por defecto** para ahorrar recursos y evitar levantar un segundo hilo asíncrono. Debes habilitarlo explícitamente en el `loggerbuf.json` poniendo `"METRICS_ENABLED": true`.
+
+Los contadores mantienen un pipeline segregado (usando un archivo propio bajo `logs_base_dir/counters`) por lo que no mezclan métricas con tus eventos principales:
+
+```python
+from telemetry import TelemetryLog
+from data_logs import CounterType
+
+telemetry = TelemetryLog("MAIN")
+
+# Incrementar un contador (asíncrono, súper ligero)
+# Si METRICS_ENABLED es falso, esta llamada se descarta silenciosamente sin consumir recursos.
+telemetry.increment(CounterType.COUNTER_LOGIN_ATTEMPTS)
+
+# Puedes incrementar en batch
+telemetry.increment(CounterType.COUNTER_API_CALLS, value=10)
+```
+Para ver tus contadores, usa la herramienta de CLI: `loggerbuf decode-logs <File> --counters`
+
 ---
 
 ## 🎛️ Control Total (Configuración Avanzada)
@@ -175,6 +195,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
+| `loggerbuf add-counter-type <Type>` | Agrega un nuevo tipo de contador a tu `registry.proto`. Soporta rangos: `--start` y `--end`. |
 | `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
 
 ### Ejemplos Potentes del CLI
