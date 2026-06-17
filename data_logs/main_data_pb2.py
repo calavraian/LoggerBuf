@@ -22,16 +22,18 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
-from . import event_status_pb2 as event__status__pb2
+from . import registry_pb2 as registry__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fmain_data.proto\x12\tmain_data\x1a\x12\x65vent_status.proto\"\xc0\x02\n\x05\x45vent\x12+\n\nevent_type\x18\x01 \x01(\x0e\x32\x17.enum_control.EventType\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x14\n\x0cgeneral_note\x18\x03 \x01(\t\x12)\n\x06status\x18\x04 \x01(\x0e\x32\x19.enum_control.EventStatus\x12\x13\n\x0blogger_name\x18\x06 \x01(\t\x12\x13\n\x0b\x63\x61ller_file\x18\x07 \x01(\t\x12\x14\n\x0c\x63\x61ller_class\x18\x08 \x01(\t\x12\x17\n\x0f\x63\x61ller_function\x18\t \x01(\t\x12\x0e\n\x06lineno\x18\n \x01(\x05\x12\x1b\n\x12previous_file_hash\x18\x8dN \x01(\x0c\x12\x17\n\x0eis_chain_start\x18\x8eN \x01(\x08\x12\x17\n\x0ehmac_signature\x18\x8fN \x01(\x0c\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0fmain_data.proto\x12\tmain_data\x1a\x0eregistry.proto\"\xc0\x02\n\x05\x45vent\x12+\n\nevent_type\x18\x01 \x01(\x0e\x32\x17.enum_control.EventType\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\x14\n\x0cgeneral_note\x18\x03 \x01(\t\x12)\n\x06status\x18\x04 \x01(\x0e\x32\x19.enum_control.EventStatus\x12\x13\n\x0blogger_name\x18\x06 \x01(\t\x12\x13\n\x0b\x63\x61ller_file\x18\x07 \x01(\t\x12\x14\n\x0c\x63\x61ller_class\x18\x08 \x01(\t\x12\x17\n\x0f\x63\x61ller_function\x18\t \x01(\t\x12\x0e\n\x06lineno\x18\n \x01(\x05\x12\x1b\n\x12previous_file_hash\x18\x8dN \x01(\x0c\x12\x17\n\x0eis_chain_start\x18\x8eN \x01(\x08\x12\x17\n\x0ehmac_signature\x18\x8fN \x01(\x0c\"\xca\x01\n\x0c\x43ounterEvent\x12/\n\x0c\x63ounter_type\x18\x01 \x01(\x0e\x32\x19.enum_control.CounterType\x12\x11\n\ttimestamp\x18\x02 \x01(\t\x12\r\n\x05\x63ount\x18\x03 \x01(\x05\x12\x13\n\x0blogger_name\x18\x04 \x01(\t\x12\x13\n\x0b\x63\x61ller_file\x18\x05 \x01(\t\x12\x14\n\x0c\x63\x61ller_class\x18\x06 \x01(\t\x12\x17\n\x0f\x63\x61ller_function\x18\x07 \x01(\t\x12\x0e\n\x06lineno\x18\x08 \x01(\x05\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'main_data_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_EVENT']._serialized_start=51
-  _globals['_EVENT']._serialized_end=371
+  _globals['_EVENT']._serialized_start=47
+  _globals['_EVENT']._serialized_end=367
+  _globals['_COUNTEREVENT']._serialized_start=370
+  _globals['_COUNTEREVENT']._serialized_end=572
 # @@protoc_insertion_point(module_scope)

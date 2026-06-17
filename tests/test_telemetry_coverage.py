@@ -11,14 +11,14 @@ def test_telemetry_singleton_and_defaults():
     log1 = TelemetryLog()
     log2 = TelemetryLog()
     assert log1._TelemetryLog__settings.get_name() == log2._TelemetryLog__settings.get_name()
-    assert log1._TelemetryLog__writer is log2._TelemetryLog__writer
+    assert log1._TelemetryLog__event_writer is log2._TelemetryLog__event_writer
 
 def test_telemetry_lossy_strategy_and_queue_full(tmp_path):
     settings = EventSettings(name=f"TEST_LOSSY_{tmp_path.name}", logs_base_dir=str(tmp_path))
     telemetry = TelemetryLog(settings)
     
     # Overwrite strategy and maxsize for testing queue full
-    writer = telemetry._TelemetryLog__writer
+    writer = telemetry._TelemetryLog__event_writer
     writer.strategy = QueueStrategy.LOSSY
     writer.queue.maxsize = 2  # Very small queue
     
@@ -43,7 +43,7 @@ def test_telemetry_lossy_strategy_and_queue_full(tmp_path):
 def test_telemetry_stop(tmp_path):
     settings = EventSettings(name=f"TEST_STOP_{tmp_path.name}", logs_base_dir=str(tmp_path))
     telemetry = TelemetryLog(settings)
-    writer = telemetry._TelemetryLog__writer
+    writer = telemetry._TelemetryLog__event_writer
     
     writer.stop()
     assert writer.stop_event.is_set()
@@ -59,7 +59,7 @@ def test_telemetry_size_rotation_and_rollover(tmp_path):
     telemetry.send(event)
     telemetry.send(event)
     
-    writer = telemetry._TelemetryLog__writer
+    writer = telemetry._TelemetryLog__event_writer
     writer.queue.join()
     time.sleep(0.1)
     
@@ -78,7 +78,7 @@ def test_telemetry_getframe_exception(tmp_path, monkeypatch):
     event = main_data_pb2.Event()
     telemetry.send(event)
     
-    writer = telemetry._TelemetryLog__writer
+    writer = telemetry._TelemetryLog__event_writer
     writer.queue.join()
     time.sleep(0.1)
     
@@ -93,12 +93,14 @@ def test_telemetry_get_date_last_record(tmp_path):
     event = main_data_pb2.Event()
     telemetry.send(event)
     
-    writer = telemetry._TelemetryLog__writer
+    writer = telemetry._TelemetryLog__event_writer
     writer.queue.join()
     time.sleep(0.1)
     
     # Now simulate a new writer reading this existing file
-    from telemetry import BackgroundEventWriter
-    writer2 = BackgroundEventWriter(settings)
-    assert writer2._cached_last_date is not None
-    writer2.stop()
+    from telemetry import EventWriter
+    import datetime
+    new_writer = EventWriter(settings)
+    assert new_writer._cached_last_date == datetime.datetime.now().date()
+    new_writer.stop()
+    telemetry._TelemetryLog__event_writer.stop()

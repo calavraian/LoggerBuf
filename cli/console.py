@@ -2,7 +2,7 @@ import click
 import sys
 import threading
 from cli.handlers import protos
-from cli.handlers import decode
+from cli.handlers import decode as decode_handler
 from cli.handlers import stress
 from cli.handlers import fields
 from cli.handlers import events
@@ -123,23 +123,31 @@ def deprecate_subfield(message_name, field_name, file):
 
 @cli.command()
 @click.argument('input_file')
-@click.option('-o', '--output', help="JSONL output file.")
-@click.option('-f', '--format', type=click.Choice(['jsonl', 'pretty']), default='jsonl')
-@click.option('--stats', is_flag=True, help="Show only statistics.")
-@click.option('--head', type=int, help="First N records.")
-@click.option('--tail', type=int, help="Last N records.")
-@click.option('--verify-key', help="Provide the HMAC Secret Key manually if not in loggerbuf.json.")
-@click.option('--skip-integrity', is_flag=True, default=False, help="Skip cryptographic validation even if the file is signed.")
-def decode_logs(input_file, output, format, stats, head, tail, verify_key, skip_integrity):
-    """Decodes binary telemetry files to JSON."""
+@click.option('--output', '-o', default=None, help="Output file (prints to stdout if not provided)")
+@click.option('--format', type=click.Choice(['jsonl', 'pretty']), default='pretty', help="Output format")
+@click.option('--stats', is_flag=True, help="Show summary statistics instead of full logs")
+@click.option('--head', type=int, help="Output the first N events")
+@click.option('--tail', type=int, help="Output the last N events")
+@click.option('--verify', help="HMAC secret key to verify the integrity of the log file")
+@click.option('--skip-integrity', is_flag=True, help="Skip HMAC integrity checks even if records contain signatures")
+@click.option('--counters', is_flag=True, help="Decode file as CounterEvents instead of standard Events")
+def decode(input_file, output, format, stats, head, tail, verify, skip_integrity, counters):
+    """Decodes a LoggerBuf binary telemetry log into JSON/Stats."""
     if head and tail:
-        click.secho("You cannot use --head and --tail together.", fg="red")
+        click.secho("Error: Cannot use both --head and --tail simultaneously.", fg='red', err=True)
         sys.exit(1)
         
-    config = ConfigManager()
-    active_key = verify_key if verify_key else config.get('HMAC_SECRET_KEY')
-    
-    decode.run_decode(input_file, output, format, stats, head, tail, active_key, skip_integrity)
+    decode_handler.run_decode(
+        input_file=input_file,
+        output_file=output,
+        format=format,
+        stats=stats,
+        head=head,
+        tail=tail,
+        verify_key=verify,
+        skip_integrity=skip_integrity,
+        is_counter=counters
+    )
 
 @cli.command()
 @click.argument('input_file')
@@ -159,6 +167,26 @@ def event():
 def config():
     """Manage LoggerBuf global configurations (loggerbuf.json)."""
     pass
+
+@cli.group()
+def counter():
+    """Manage Counter types."""
+    pass
+
+@counter.command(name="add-type")
+@click.argument('name')
+@click.option('--counters', default="", help="Comma separated list of counters (e.g. CLICK,VIEW)")
+@click.option('--reserve', default=10, type=int, help="Number of extra indices to reserve for future counters.")
+def add_counter_type(name, counters, reserve):
+    """Adds a new counter block and optional counters."""
+    counter_list = [c.strip() for c in counters.split(",")] if counters else []
+    try:
+        events.add_counter_type(name, counter_list, reserve)
+        click.secho("\n[WARNING] You modified the .proto file.", fg="yellow")
+        click.secho("Run 'loggerbuf build' to compile it, and restart your application for changes to take effect.", fg="yellow")
+    except Exception as e:
+        click.secho(f"Error: {e}", fg="red")
+        sys.exit(1)
 
 @event.command()
 @click.argument('name')

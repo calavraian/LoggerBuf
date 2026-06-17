@@ -24,7 +24,7 @@ def sample_telemetry_file(tmp_path):
         event.general_note = f"Decoder Event {i}"
         telemetry.send(event)
         
-    telemetry._TelemetryLog__writer.queue.join()
+    telemetry._TelemetryLog__event_writer.queue.join()
     time.sleep(0.1)
     
     events_dir = tmp_path / "events"
@@ -47,7 +47,7 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
     
     # Execute CLI
     cmd = [
-        sys.executable, "-m", "cli.console", "decode-logs",
+        sys.executable, "-m", "cli.console", "decode",
         sample_telemetry_file,
         "--output", str(output_file),
         "--format", "jsonl"
@@ -67,7 +67,7 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
 def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     # Head 2
     cmd_head = [
-        sys.executable, "-m", "cli.console", "decode-logs",
+        sys.executable, "-m", "cli.console", "decode",
         sample_telemetry_file,
         "--head", "2",
         "--format", "jsonl"
@@ -80,7 +80,7 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     
     # Tail 2
     cmd_tail = [
-        sys.executable, "-m", "cli.console", "decode-logs",
+        sys.executable, "-m", "cli.console", "decode",
         sample_telemetry_file,
         "--tail", "2",
         "--format", "jsonl"
@@ -93,7 +93,7 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
 
 def test_decoder_cli_stats(sample_telemetry_file):
     cmd_stats = [
-        sys.executable, "-m", "cli.console", "decode-logs",
+        sys.executable, "-m", "cli.console", "decode",
         sample_telemetry_file,
         "--stats"
     ]

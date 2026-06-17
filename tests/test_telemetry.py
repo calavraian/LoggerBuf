@@ -2,16 +2,16 @@ import os
 import time
 import pytest
 from telemetry import TelemetryLog, EventSettings
-from data_logs import main_data_pb2, event_status_pb2, event_example_pb2
+from data_logs import main_data_pb2, registry_pb2, event_example_pb2
 from config import QueueStrategy
 import struct
 
 class DummyTelemetryCaller:
     def execute_telemetry(self, telemetry_logger):
         event = main_data_pb2.Event()
-        event.event_type = event_status_pb2.EventType.EVENT_DATA_BASE_PROCESSING
+        event.event_type = registry_pb2.EventType.EVENT_DATA_BASE_PROCESSING
         event.general_note = "Strict Context Test"
-        event.status = event_status_pb2.EventStatus.STATUS_COMPLETED
+        event.status = registry_pb2.EventStatus.STATUS_COMPLETED
         
         telemetry_logger.send(event)
 
@@ -27,7 +27,7 @@ def test_telemetry_injections_and_nested_protos(tmp_path):
     caller.execute_telemetry(telemetry)
     
     # Allow the background worker to flush to disk
-    telemetry._TelemetryLog__writer.queue.join()
+    telemetry._TelemetryLog__event_writer.queue.join()
     time.sleep(0.1)
     
     events_dir = tmp_path / "events"
@@ -75,7 +75,7 @@ def test_telemetry_concurrency_lossless(tmp_path):
         telemetry.send(event)
         
     # Wait for the queue to flush
-    telemetry._TelemetryLog__writer.queue.join()
+    telemetry._TelemetryLog__event_writer.queue.join()
     time.sleep(0.1)
     
     event_files = list((tmp_path / "events").glob("events_TEST_CONCURRENCY.log"))

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-import "event_status.proto";
+import "registry.proto";
 
 
 package main_data;
@@ -46,4 +46,24 @@ message Event {
     
     // The cryptographic signature (HMAC) for this event
     bytes hmac_signature = 9999;
+}
+
+message CounterEvent {
+    // The type of counter.
+    enum_control.CounterType counter_type = 1;
+
+    // The timestamp of the event
+    string timestamp = 2;
+
+    // The count value
+    int32 count = 3;
+
+    // The name of the Logger instance
+    string logger_name = 4;
+
+    // Caller details
+    string caller_file = 5;
+    string caller_class = 6;
+    string caller_function = 7;
+    int32 lineno = 8;
 }

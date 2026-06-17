@@ -50,3 +50,15 @@ enum EventType {
     EXAMPLE_EVENT_DATA_PROCESSED = 104;
     EXAMPLE_EVENT_DATA_STORED = 105;
 }
+
+/**
+* All counters to be logged need to be registered here first
+* define and reserve a range of values for each counter.
+*/
+enum CounterType {
+    // Generic counter types
+    // Range: 0-100
+    // Next value: 2
+    COUNTER_UNSPECIFIED = 0;
+    COUNTER_GENERIC = 1;
+}

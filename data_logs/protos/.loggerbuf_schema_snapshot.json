@@ -25,8 +25,43 @@
       }
     }
   },
-  "event_status.proto": {},
   "main_data.proto": {
+    "CounterEvent": {
+      "fields": {
+        "1": {
+          "name": "counter_type",
+          "type": 14
+        },
+        "2": {
+          "name": "timestamp",
+          "type": 9
+        },
+        "3": {
+          "name": "count",
+          "type": 5
+        },
+        "4": {
+          "name": "logger_name",
+          "type": 9
+        },
+        "5": {
+          "name": "caller_file",
+          "type": 9
+        },
+        "6": {
+          "name": "caller_class",
+          "type": 9
+        },
+        "7": {
+          "name": "caller_function",
+          "type": 9
+        },
+        "8": {
+          "name": "lineno",
+          "type": 5
+        }
+      }
+    },
     "Event": {
       "fields": {
         "1": {
@@ -79,5 +114,6 @@
         }
       }
     }
-  }
+  },
+  "registry.proto": {}
 }

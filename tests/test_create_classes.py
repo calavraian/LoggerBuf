@@ -22,7 +22,7 @@ def test_cli_protos_flow_e2e(tmp_path):
         # 0. Setup base protos
         import shutil
         os.makedirs("data_logs/protos", exist_ok=True)
-        src_status = os.path.join(original_cwd, "data_logs/protos/event_status.proto")
+        src_status = os.path.join(original_cwd, "data_logs/protos/registry.proto")
         shutil.copy(src_status, "data_logs/protos/")
         
         # 1. Init

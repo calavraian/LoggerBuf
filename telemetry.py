@@ -6,131 +6,88 @@ import threading
 import time
 from config import ConfigManager, QueueStrategy, ConfigKey
 
-from data_logs import Event
+from data_logs import Event, CounterEvent
 from queue_metrics import QueueMetrics, MetricField
 
-class EventSettings:
-    def __init__(
-            self,
-            name: str = None,
-            logs_base_dir: str = ".",
-            backup_dir: str = None,
-            file_size: int = None,
-        ):
-        """
-        Constructor for EventSettings.
-
-        Parameters
-        ----------
-        name : str, optional
-            Name of the logger. Defaults to defaults.EVENT_LOGGER_NAME.
-        logs_base_dir : str, optional
-            Base directory for events. Defaults to "." (current dir).
-        backup_dir : str, optional
-            Directory for backup event files. Defaults to "history".
-        file_size : int, optional
-            Maximum size of each event file in bytes.
-        """
+class BaseSettings:
+    def __init__(self, prefix: str, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
         config = ConfigManager()
-        self.__name = name if name is not None else config.get('EVENT_LOGGER_NAME')
+        self.prefix = prefix
+        self.__name = name if name is not None else config.get(f'{prefix}_LOGGER_NAME')
         self.__logs_base_dir = logs_base_dir
-        self.__backup_dir = backup_dir if backup_dir is not None else config.get('EVENT_BACKUP_DIR')
-        self.__file_size = file_size if file_size is not None else config.get('EVENT_FILE_SIZE')
-    
-    def get_name(self):
-        """
-        Gets the name of the logger.
+        self.__backup_dir = backup_dir if backup_dir is not None else config.get(f'{prefix}_BACKUP_DIR')
+        self.__file_size = file_size if file_size is not None else config.get(f'{prefix}_FILE_SIZE')
+        self.__base_dir = config.get(f'{prefix}_BASE_DIR')
+        self.__main_file_name = config.get(f'{prefix}_MAIN_FILE_NAME')
+        self.__queue_max_size = config.get(f'{prefix}_QUEUE_MAX_SIZE')
+        self.__queue_strategy = config.get(f'{prefix}_QUEUE_STRATEGY')
 
-        Returns
-        -------
-        str
-            The name of the logger.
-        """
-        return self.__name
-    
-    def get_logs_base_dir(self):        
-        """
-        Gets the base directory for event file.
+    def get_name(self): return self.__name
+    def get_logs_base_dir(self): return self.__logs_base_dir
+    def get_backup_dir(self): return self.__backup_dir
+    def get_file_size(self): return self.__file_size
+    def get_base_dir(self): return self.__base_dir
+    def get_main_file_name(self): return self.__main_file_name
+    def get_queue_max_size(self): return self.__queue_max_size
+    def get_queue_strategy(self): return self.__queue_strategy
 
-        Returns
-        -------
-        str
-            The base directory for event file.
-        """
-        return self.__logs_base_dir
-    
-    def get_backup_dir(self):
-        """
-        Gets the directory for backup event files.
 
-        Returns
-        -------
-        str
-            The directory for backup event files.
-        """
-        return self.__backup_dir
-    
-    def get_file_size(self):
-        """
-        Gets the maximum size of each event file.
+class EventSettings(BaseSettings):
+    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
+        super().__init__("EVENT", name, logs_base_dir, backup_dir, file_size)
 
-        Returns
-        -------
-        int
-            The maximum size of each event file in bytes.
-        """
-        return self.__file_size
+class MetricSettings(BaseSettings):
+    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
+        super().__init__("METRIC", name, logs_base_dir, backup_dir, file_size)
 
-class BackgroundEventWriter:
-    def __init__(self, settings: EventSettings):
+
+class BaseBackgroundWriter:
+    def __init__(self, settings: BaseSettings, record_class):
         config = ConfigManager()
         self.settings = settings
-        self.queue = queue.Queue(maxsize=config.get('EVENT_QUEUE_MAX_SIZE'))
-        queue_strategy_val = config.get('EVENT_QUEUE_STRATEGY')
+        self.record_class = record_class
+        
+        self.queue = queue.Queue(maxsize=settings.get_queue_max_size())
+        queue_strategy_val = settings.get_queue_strategy()
         self.strategy = QueueStrategy.LOSSLESS
         if queue_strategy_val == "LOSSY":
             self.strategy = QueueStrategy.LOSSY
         elif queue_strategy_val == "LOSSLESS":
             self.strategy = QueueStrategy.LOSSLESS
+            
         self.stop_event = threading.Event()
-        
-        # In-memory Metrics Collector
         self.metrics = QueueMetrics()
         
         self.full_path_logs = self._get_full_path_logs()
-        self.current_filename = os.path.join(self.full_path_logs, f"{config.get('EVENT_MAIN_FILE_NAME')}_{self.settings.get_name()}.log")
+        self.current_filename = os.path.join(self.full_path_logs, f"{settings.get_main_file_name()}_{self.settings.get_name()}.log")
         
         self.file_lock = threading.Lock()
         self._file = None
         
-        # HMAC Security
         self.hmac_secret_key = config.get('HMAC_SECRET_KEY')
         self._current_hash = None
         self._needs_chain_start = True
         
-        self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-TelemetryWorker", daemon=True)
-        self.worker_thread.start()
+        # worker_thread will be started by subclass
+        self.worker_thread = None
         
-        # Cache the date of the last record at startup
         self._cached_last_date = self._get_date_last_record()
 
     def _get_full_path_logs(self):
         logs_base_dir = self.settings.get_logs_base_dir() if self.settings.get_logs_base_dir() != "." else os.getcwd()
-        config = ConfigManager()
-        full_path_logs = os.path.join(logs_base_dir, config.get('EVENT_BASE_DIR'))
+        full_path_logs = os.path.join(logs_base_dir, self.settings.get_base_dir())
         os.makedirs(full_path_logs, exist_ok=True)
         return full_path_logs
 
-    def write_event(self, event: Event):
-        # Stamp timestamp on caller thread to represent when event actually happened
-        event.timestamp = datetime.datetime.now().isoformat()
+    def write_record(self, record):
+        record.timestamp = datetime.datetime.now().isoformat()
         
         try:
             qsize = self.queue.qsize()
             if self.strategy == QueueStrategy.LOSSY:
-                self.queue.put_nowait(event)
+                self.queue.put_nowait(record)
             else:
-                self.queue.put(event)
+                self.queue.put(record)
             self.metrics.record_enqueue(qsize)
         except queue.Full:
             self.metrics.record_drop()
@@ -138,7 +95,7 @@ class BackgroundEventWriter:
     def stop(self):
         self.stop_event.set()
         self.queue.put(None)
-        if self.worker_thread.is_alive():
+        if self.worker_thread and self.worker_thread.is_alive():
             self.worker_thread.join()
         if self._file and not self._file.closed:
             self._file.close()
@@ -146,8 +103,6 @@ class BackgroundEventWriter:
     def _process_queue(self):
         while not self.stop_event.is_set():
             try:
-                # Wait for event to arrive, with a 10-minute heartbeat (600s)
-                # to ensure the thread wakes up periodically and checks the stop_event
                 data = self.queue.get(timeout=600.0)
                 if data is None:
                     self.queue.task_done()
@@ -164,29 +119,25 @@ class BackgroundEventWriter:
             except Exception as e:
                 print(f"Error in LoggerBuf telemetry worker thread: {e}")
 
-
-    def _write_record(self, event: Event):
+    def _write_record(self, record):
         with self.file_lock:
-            # Check size and date rotation before writing
             self._check_rotation()
             
             if not self._file or self._file.closed:
                 self._file = open(self.current_filename, 'ab')
                 
-            # --- HMAC Security Logic ---
             if self.hmac_secret_key:
                 if self._needs_chain_start:
-                    event.is_chain_start = True
+                    record.is_chain_start = True
                     if self._current_hash:
-                        event.previous_file_hash = self._current_hash
+                        record.previous_file_hash = self._current_hash
                     self._needs_chain_start = False
                 else:
-                    event.is_chain_start = False
-                    event.ClearField("previous_file_hash")
+                    record.is_chain_start = False
+                    record.ClearField("previous_file_hash")
                 
-                # Clear signature before calculating
-                event.ClearField("hmac_signature")
-                payload = event.SerializeToString()
+                record.ClearField("hmac_signature")
+                payload = record.SerializeToString()
                 
                 import hmac
                 import hashlib
@@ -197,19 +148,14 @@ class BackgroundEventWriter:
                     hashlib.sha256
                 ).digest()
                 
-                event.hmac_signature = new_hash
+                record.hmac_signature = new_hash
                 self._current_hash = new_hash
             else:
-                # If no security enabled, ensure these are clear
-                event.ClearField("hmac_signature")
-                event.ClearField("previous_file_hash")
-                event.is_chain_start = False
+                record.ClearField("hmac_signature")
+                record.ClearField("previous_file_hash")
+                record.is_chain_start = False
 
-            # Serialize to binary bytes
-            data = event.SerializeToString()
-            
-            # Write Length-Prefixed Frame
-            # 4-byte big-endian integer representing message size, then the protobuf payload
+            data = record.SerializeToString()
             size = len(data)
             self._file.write(size.to_bytes(4, byteorder='big'))
             self._file.write(data)
@@ -217,13 +163,10 @@ class BackgroundEventWriter:
 
     def _check_rotation(self):
         current_date = datetime.datetime.now().date()
-        
-        # If no file exists yet or it's empty, we just track current date
         if self._cached_last_date is None:
             self._cached_last_date = current_date
             
         last_date = self._cached_last_date
-        
         should_rotate_time = current_date != last_date
         
         should_rotate_size = False
@@ -247,11 +190,9 @@ class BackgroundEventWriter:
             
         try:
             with open(self.current_filename, 'rb') as f:
-                # Seek to end of file
                 f.seek(0, os.SEEK_END)
                 position = f.tell()
                 
-                # Seek back starting with 4KB, exponentially backoff up to the entire file
                 seek_back = min(4096, position)
                 last_event_bytes = None
                 
@@ -259,7 +200,6 @@ class BackgroundEventWriter:
                     f.seek(position - seek_back, os.SEEK_SET)
                     chunk = f.read(seek_back)
                     
-                    # Scan length-prefixed chunks sequentially from left to right in this buffer
                     idx = 0
                     while idx <= len(chunk) - 4:
                         size = int.from_bytes(chunk[idx:idx+4], byteorder='big')
@@ -267,22 +207,19 @@ class BackgroundEventWriter:
                             last_event_bytes = chunk[idx+4 : idx+4+size]
                             idx += 4 + size
                         else:
-                            # Shift by 1 byte if alignment is lost
                             idx += 1
                             
                     if last_event_bytes:
                         break
                         
                     if seek_back == position:
-                        # Reached the beginning of the file and still found nothing
                         break
                         
-                    # Exponentially expand the read buffer backwards
                     seek_back = min(seek_back * 2, position)
                 
                 if last_event_bytes:
-                    event = Event.FromString(last_event_bytes)
-                    return datetime.datetime.strptime(event.timestamp[:10], "%Y-%m-%d").date()
+                    record = self.record_class.FromString(last_event_bytes)
+                    return datetime.datetime.strptime(record.timestamp[:10], "%Y-%m-%d").date()
         except Exception as e:
             print(f"Error reading last telemetry date: {e}")
         return None
@@ -291,8 +228,7 @@ class BackgroundEventWriter:
         current_date_str = (last_date or current_date).strftime("%Y-%m-%d")
         backup_subdir = os.path.join(self.full_path_logs, self.settings.get_backup_dir(), current_date_str)
         os.makedirs(backup_subdir, exist_ok=True)
-        config = ConfigManager()
-        base_name = f"{config.get('EVENT_MAIN_FILE_NAME')}_{self.settings.get_name()}"
+        base_name = f"{self.settings.get_main_file_name()}_{self.settings.get_name()}"
         
         index = 1
         while True:
@@ -310,11 +246,30 @@ class BackgroundEventWriter:
         except Exception as e:
             print(f"Failed to compress and rollover telemetry file: {e}")
 
+class EventWriter(BaseBackgroundWriter):
+    def __init__(self, settings: EventSettings):
+        super().__init__(settings, Event)
+        self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-TelemetryWorker", daemon=True)
+        self.worker_thread.start()
+        
+    def write_event(self, event: Event):
+        self.write_record(event)
+
+class MetricWriter(BaseBackgroundWriter):
+    def __init__(self, settings: MetricSettings):
+        super().__init__(settings, CounterEvent)
+        self.worker_thread = threading.Thread(target=self._process_queue, name="LoggerBuf-MetricWorker", daemon=True)
+        self.worker_thread.start()
+        
+    def write_event(self, event: CounterEvent):
+        self.write_record(event)
+
 class TelemetryLog:
     __instances = {}
     __lock = threading.Lock()
 
     def __init__(self, settings: EventSettings = None):
+        config = ConfigManager()
         if not settings:
             settings = EventSettings()
             
@@ -322,28 +277,30 @@ class TelemetryLog:
             name = settings.get_name()
             if name not in TelemetryLog.__instances:
                 self.__settings = settings
-                self.__writer = BackgroundEventWriter(settings)
-                TelemetryLog.__instances[name] = (self.__settings, self.__writer)
+                self.__event_writer = EventWriter(settings)
+                
+                self.__metric_writer = None
+                if config.get('METRICS_ENABLED'):
+                    m_settings = MetricSettings(name=name, logs_base_dir=settings.get_logs_base_dir())
+                    self.__metric_writer = MetricWriter(m_settings)
+                    
+                TelemetryLog.__instances[name] = (self.__settings, self.__event_writer, self.__metric_writer)
             else:
                 self.__settings = TelemetryLog.__instances[name][0]
-                self.__writer = TelemetryLog.__instances[name][1]
+                self.__event_writer = TelemetryLog.__instances[name][1]
+                self.__metric_writer = TelemetryLog.__instances[name][2]
 
     def create_event(self, event: Event):
-        # Extract caller information
         import sys
         try:
-            # Stack level 1 gets the caller of create_event or send
             frame = sys._getframe(1)
-            
             event.caller_file = os.path.basename(frame.f_code.co_filename)
             event.caller_function = frame.f_code.co_name
             event.lineno = frame.f_lineno
-            
             if 'self' in frame.f_locals:
                 event.caller_class = frame.f_locals['self'].__class__.__name__
             else:
                 event.caller_class = "None"
-                
         except Exception:
             event.caller_file = "Unknown"
             event.caller_function = "Unknown"
@@ -352,18 +309,13 @@ class TelemetryLog:
             
         event.logger_name = self.__settings.get_name()
         
-        # Check for deprecated fields
         import warnings
-        
         def _check_deprecated_fields(msg, prefix=""):
             for field_descriptor, value in msg.ListFields():
                 field_path = f"{prefix}{field_descriptor.name}"
                 if field_descriptor.GetOptions().deprecated:
                     warnings.warn(
-                        f"LoggerBuf: You are sending telemetry using a DEPRECATED field '{field_path}'. "
-                        f"This field is marked for removal in the schema. Please update your code.",
-                        DeprecationWarning,
-                        stacklevel=3
+                        f"LoggerBuf: You are sending telemetry using a DEPRECATED field '{field_path}'."
                     )
                 if field_descriptor.type == field_descriptor.TYPE_MESSAGE:
                     if field_descriptor.label == field_descriptor.LABEL_REPEATED:
@@ -373,17 +325,37 @@ class TelemetryLog:
                         _check_deprecated_fields(value, f"{field_path}.")
 
         _check_deprecated_fields(event)
-        
-        self.__writer.write_event(event)
+        self.__event_writer.write_event(event)
 
-    # Alias to offer a cleaner telemetry API
+    def increment(self, counter_type, value: int = 1):
+        if not self.__metric_writer:
+            return
+            
+        event = CounterEvent()
+        event.counter_type = counter_type
+        event.count = value
+        
+        import sys
+        try:
+            frame = sys._getframe(1)
+            event.caller_file = os.path.basename(frame.f_code.co_filename)
+            event.caller_function = frame.f_code.co_name
+            event.lineno = frame.f_lineno
+            if 'self' in frame.f_locals:
+                event.caller_class = frame.f_locals['self'].__class__.__name__
+            else:
+                event.caller_class = "None"
+        except Exception:
+            event.caller_file = "Unknown"
+            event.caller_function = "Unknown"
+            event.lineno = 0
+            event.caller_class = "Unknown"
+            
+        event.logger_name = self.__settings.get_name()
+        self.__metric_writer.write_event(event)
+
     send = create_event
 
     def get_metrics(self, keys: list = None, output_format: str = "dict", verbose: bool = False):
-        """
-        Retrieves a report containing high-precision metrics on the queue's behavior.
-        """
-        qsize = self.__writer.queue.qsize()
-        return self.__writer.metrics.get_report(current_qsize=qsize, keys=keys, output_format=output_format, verbose=verbose)
-
-
+        qsize = self.__event_writer.queue.qsize()
+        return self.__event_writer.metrics.get_report(current_qsize=qsize, keys=keys, output_format=output_format, verbose=verbose)

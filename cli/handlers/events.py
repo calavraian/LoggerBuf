@@ -4,14 +4,14 @@ import click
 from typing import List
 
 PROTO_DIR = "data_logs/protos"
-EVENT_STATUS_PROTO = os.path.join(PROTO_DIR, "event_status.proto")
+REGISTRY_PROTO = os.path.join(PROTO_DIR, "registry.proto")
 
 def _read_proto() -> str:
-    with open(EVENT_STATUS_PROTO, "r") as f:
+    with open(REGISTRY_PROTO, "r") as f:
         return f.read()
 
 def _write_proto(content: str):
-    with open(EVENT_STATUS_PROTO, "w") as f:
+    with open(REGISTRY_PROTO, "w") as f:
         f.write(content)
 
 def _get_max_value(enum_content: str) -> int:
@@ -28,7 +28,7 @@ def _append_to_enum(proto_content: str, enum_name: str, block_name: str, items: 
     enum_pattern = re.compile(rf'(enum\s+{enum_name}\s+{{)(.*?)(^\}})', re.DOTALL | re.MULTILINE)
     match = enum_pattern.search(proto_content)
     if not match:
-        raise ValueError(f"Enum {enum_name} not found in {EVENT_STATUS_PROTO}")
+        raise ValueError(f"Enum {enum_name} not found in {REGISTRY_PROTO}")
     
     enum_start = match.group(1)
     enum_body = match.group(2)
@@ -127,7 +127,7 @@ def add_type(name: str, statuses: List[str], reserve: int):
     proto_content = _append_to_enum(proto_content, "EventStatus", name, status_names, reserve=reserve)
     _write_proto(proto_content)
     
-    click.secho(f"Event type '{name}' and its statuses added successfully to event_status.proto", fg="green")
+    click.secho(f"Event type '{name}' and its statuses added successfully to registry.proto", fg="green")
 
 def add_status(type_name: str, status_name: str):
     proto_content = _read_proto()
@@ -143,7 +143,7 @@ def add_status(type_name: str, status_name: str):
     proto_content = _add_status_to_block(proto_content, "EventStatus", prefix, st_name)
     _write_proto(proto_content)
     
-    click.secho(f"Status '{st_name}' added successfully to event_status.proto", fg="green")
+    click.secho(f"Status '{st_name}' added successfully to registry.proto", fg="green")
 
 def list_events(type_name: str = None):
     proto_content = _read_proto()
@@ -170,3 +170,23 @@ def list_events(type_name: str = None):
                         click.echo(line.strip())
                 else:
                     click.echo(line.strip())
+
+def add_counter_type(name: str, counters: List[str], reserve: int):
+    proto_content = _read_proto()
+    
+    prefix = name.upper()
+    if prefix.startswith("COUNTER_"):
+        prefix = prefix[8:]
+        
+    counter_names = []
+    for ct in counters:
+        ct_name = ct.upper()
+        if not ct_name.startswith(f"{prefix}_"):
+            ct_name = f"{prefix}_{ct_name}"
+        counter_names.append(ct_name)
+        
+    proto_content = _append_to_enum(proto_content, "CounterType", name, counter_names, reserve=reserve)
+    _write_proto(proto_content)
+    
+    click.secho(f"Counter block '{name}' with {len(counter_names)} counters added successfully to registry.proto", fg="green")
+

@@ -6,17 +6,19 @@ import re
 from google.protobuf.json_format import MessageToDict
 
 try:
-    from data_logs import Event
+    from data_logs import Event, CounterEvent
 except ImportError:
     Event = None
+    CounterEvent = None
 
-def decode_file(filepath, verify_key=None, skip_integrity=False):
+def decode_file(filepath, verify_key=None, skip_integrity=False, is_counter=False):
     """
     Reads a length-prefixed binary log file (raw or gzipped)
     and yields deserialized Event objects.
     """
-    if not Event:
-        raise ImportError("Event class is not available. Please run 'loggerbuf build' first.")
+    record_class = CounterEvent if is_counter else Event
+    if not record_class:
+        raise ImportError(f"{record_class.__name__ if record_class else 'Event class'} is not available. Please run 'loggerbuf build' first.")
         
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
@@ -48,19 +50,19 @@ def decode_file(filepath, verify_key=None, skip_integrity=False):
             event_index += 1
             
             try:
-                event = Event.FromString(payload)
+                event = record_class.FromString(payload)
                 
                 # --- HMAC Verification ---
                 if not skip_integrity and verify_key:
-                    if event.hmac_signature:
+                    if hasattr(event, "hmac_signature") and event.hmac_signature:
                         stored_sig = event.hmac_signature
                         
                         # Prepare payload for hash
                         event.ClearField("hmac_signature")
                         
-                        if event.is_chain_start:
+                        if getattr(event, "is_chain_start", False):
                             # Start of a new chain
-                            prev = event.previous_file_hash if event.previous_file_hash else b''
+                            prev = event.previous_file_hash if getattr(event, "previous_file_hash", b'') else b''
                         else:
                             prev = current_hash if current_hash else b''
                             
@@ -81,11 +83,11 @@ def decode_file(filepath, verify_key=None, skip_integrity=False):
             except Exception as e:
                 click.secho(f"Warning: Failed to deserialize event of size {size} at index {event_index}: {e}", fg='red', err=True)
 
-def run_decode(input_file: str, output_file: str, format: str, stats: bool, head: int, tail: int, verify_key: str = None, skip_integrity: bool = False):
+def run_decode(input_file: str, output_file: str, format: str, stats: bool, head: int, tail: int, verify_key: str = None, skip_integrity: bool = False, is_counter: bool = False):
     """Main decoding logic separated from click."""
     
     try:
-        event_generator = decode_file(input_file, verify_key, skip_integrity)
+        event_generator = decode_file(input_file, verify_key, skip_integrity, is_counter)
     except Exception as e:
         print(f"Error reading file: {e}", file=sys.stderr)
         sys.exit(1)
@@ -106,10 +108,14 @@ def run_decode(input_file: str, output_file: str, format: str, stats: bool, head
         try:
             for ev in event_generator:
                 total_events += 1
-                ev_type_name = str(ev.event_type)
-                status_name = str(ev.status)
+                if is_counter:
+                    ev_type_name = str(ev.counter_type)
+                    status_name = "N/A"
+                else:
+                    ev_type_name = str(ev.event_type)
+                    status_name = str(ev.status)
                 
-                event_types[ev_type_name] = event_types.get(ev_type_name, 0) + 1
+                event_types[ev_type_name] = event_types.get(ev_type_name, 0) + (ev.count if is_counter else 1)
                 statuses[status_name] = statuses.get(status_name, 0) + 1
         except Exception as e:
             print(f"Error decoding events: {e}", file=sys.stderr)
@@ -118,12 +124,17 @@ def run_decode(input_file: str, output_file: str, format: str, stats: bool, head
         print(f"File: {input_file}")
         print(f"Total events decoded: {total_events}")
         
-        print("\nEvent Types Breakdown:")
-        for k, v in event_types.items():
-            print(f"  - {k}: {v}")
-        print("\nStatuses Breakdown:")
-        for k, v in statuses.items():
-            print(f"  - {k}: {v}")
+        if is_counter:
+            print("\nCounters Breakdown:")
+            for k, v in event_types.items():
+                print(f"  - {k}: {v} (total count)")
+        else:
+            print("\nEvent Types Breakdown:")
+            for k, v in event_types.items():
+                print(f"  - {k}: {v}")
+            print("\nStatuses Breakdown:")
+            for k, v in statuses.items():
+                print(f"  - {k}: {v}")
         return
 
     out_f = open(output_file, "w") if output_file else sys.stdout

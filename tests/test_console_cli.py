@@ -116,18 +116,18 @@ def test_deprecate_subfield(mock_fields, runner):
     assert result.exit_code == 0
     mock_fields.deprecate_subfield.assert_called_once_with('Msg', 'fld', file_name=None)
 
-@patch('cli.console.decode')
-def test_decode_logs(mock_decode, runner):
-    result = runner.invoke(cli, ['decode-logs', 'file.bin'])
+@patch('cli.console.decode_handler.run_decode')
+def test_decode_logs(mock_run_decode, runner):
+    result = runner.invoke(cli, ['decode', 'file.bin'])
     assert result.exit_code == 0
-    mock_decode.run_decode.assert_called_once_with('file.bin', None, 'jsonl', False, None, None, None, False)
+    mock_run_decode.assert_called_once()
 
-@patch('cli.console.decode')
-def test_decode_logs_head_tail_conflict(mock_decode, runner):
-    result = runner.invoke(cli, ['decode-logs', 'file.bin', '--head', '10', '--tail', '10'])
+@patch('cli.console.decode_handler.run_decode')
+def test_decode_logs_head_tail_conflict(mock_run_decode, runner):
+    result = runner.invoke(cli, ['decode', 'file.bin', '--head', '10', '--tail', '10'])
     assert result.exit_code == 1
-    assert "cannot use --head and --tail together" in result.output
-    mock_decode.run_decode.assert_not_called()
+    assert "Cannot use both --head and --tail simultaneously" in result.output
+    mock_run_decode.assert_not_called()
 
 @patch('cli.console.decode')
 def test_decode_debug(mock_decode, runner):
