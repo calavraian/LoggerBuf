@@ -146,6 +146,20 @@ def test_stress_test(mock_stress, runner):
     assert call_kwargs['total_writes'] == 500
 
 @patch('cli.console.ConfigManager')
+def test_config_init(mock_cm_class, runner):
+    result = runner.invoke(cli, ['config', 'init'])
+    assert result.exit_code == 0
+    assert "is ready" in result.output
+    mock_cm_class.assert_called_once()
+
+@patch('cli.console.ConfigManager')
+def test_config_init_error(mock_cm_class, runner):
+    mock_cm_class.side_effect = Exception("init config error")
+    result = runner.invoke(cli, ['config', 'init'])
+    assert result.exit_code == 1
+    assert "Error: init config error" in result.output
+
+@patch('cli.console.ConfigManager')
 def test_config_set_get(mock_cm_class, runner):
     mock_cm = MagicMock()
     mock_cm_class.return_value = mock_cm

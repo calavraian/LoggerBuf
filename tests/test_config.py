@@ -51,5 +51,22 @@ class TestConfig(unittest.TestCase):
         config.remove('LOG_LEVEL')
         self.assertEqual(config.get('LOG_LEVEL'), 'DEBUG') # Default from DEFAULT_CONFIG
 
+    def test_config_load_no_overwrite(self):
+        # Create a config file first
+        custom_data = {"LOG_LEVEL": "CRITICAL"}
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(custom_data, f)
+        
+        # Instantiate ConfigManager (like 'init' command does)
+        config = ConfigManager()
+        
+        # Check that it loaded our custom file instead of generating defaults
+        self.assertEqual(config.get('LOG_LEVEL'), 'CRITICAL')
+        
+        # Ensure the file still has our custom data and wasn't overwritten
+        with open(CONFIG_FILE, 'r') as f:
+            data = json.load(f)
+        self.assertEqual(data['LOG_LEVEL'], 'CRITICAL')
+
 if __name__ == '__main__':
     unittest.main()
