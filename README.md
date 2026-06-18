@@ -18,12 +18,17 @@ Install LoggerBuf in your environment using pip:
 pip install loggerbuf
 ```
 
-**2. Initialize Configuration (Optional but Recommended):**
-To generate your `loggerbuf.json` file with the default values so you can easily view or edit it manually with your favorite editor, run:
+**2. Initialize the Project:**
+To bootstrap your LoggerBuf project, simply run the master init command:
 ```bash
-loggerbuf config init
+loggerbuf init
 ```
-This will create the file in your current directory, allowing you to easily adjust paths, log levels, and behaviors.
+This command performs a full project initialization step-by-step:
+1. `config init`: Generates `loggerbuf.json` so you can customize settings.
+2. `protos-init`: Creates the local `loggerbuf_schemas/` directory with the required base schemas.
+3. `build`: Compiles the Python classes automatically.
+
+You are now ready to log! You can also run these sub-commands individually if you prefer an iterative setup.
 
 ---
 
@@ -222,7 +227,10 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 
 | Command | Description |
 |---|---|
-| `loggerbuf init` | Initializes the `data_logs/protos` directory. |
+| `loggerbuf init` | Master command to bootstrap configuration and schemas all at once. |
+| `loggerbuf config init` | Generates the default `loggerbuf.json` configuration file. |
+| `loggerbuf protos-init` | Initializes the `loggerbuf_schemas/` structure and Registry in the local project. |
+| `loggerbuf factory-reset` | Securely resets the project configuration and schemas to ground zero (requires a security challenge, leaves historical logs untouched). |
 | `loggerbuf create-event <Name>` | Scaffolds a new `.proto` file for a custom event. |
 | `loggerbuf register-event <Name>`| Links your custom event into the `main_data.proto` pipeline. |
 | `loggerbuf add-subfield ...` | Safely injects a new field into an existing event. |
@@ -297,8 +305,8 @@ Because telemetry is stored in binary, **never delete a field or change its data
 
 If you need to change a field, use the CLI to deprecate the old one and add a new one safely:
 ```bash
-loggerbuf deprecate-subfield UserEvent "age"
-loggerbuf add-subfield UserEvent "age_str" "string"
+loggerbuf deprecate-subfield DemoUserEvent "new_metric"
+loggerbuf add-subfield DemoUserEvent "new_metric_str" "string"
 loggerbuf build
 ```
 
