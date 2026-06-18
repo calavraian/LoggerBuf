@@ -106,8 +106,8 @@ def test_debugger_log_destination_fallback(tmp_path):
     settings_json = LoggerSettings(name="TEST_JSON")
     assert getattr(settings_json, "_LoggerSettings__stream") == LogDestination.FILE_LIVE
     
-    # Test Priority 3: Invalid JSON fallback
-    config.set(ConfigKey.LOGGING_DESTINATION, "INVALID_STREAM_NAME")
+    # Test Priority 3: Invalid JSON fallback (simulating bad JSON by bypassing set validation)
+    config._config[ConfigKey.LOGGING_DESTINATION.value] = "INVALID_STREAM_NAME"
     settings_fallback = LoggerSettings(name="TEST_FALLBACK")
     assert getattr(settings_fallback, "_LoggerSettings__stream") == LogDestination.CONSOLE
     

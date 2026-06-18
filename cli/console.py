@@ -287,7 +287,7 @@ def reset(key):
 @click.argument('key')
 def get(key):
     """Gets a configuration value, or group (all, logging, telemetry, metrics)."""
-    from config import DEFAULT_CONFIG
+    from config import DEFAULT_CONFIG, CONFIG_CHOICES
     config_manager = ConfigManager()
     
     group = key.lower()
@@ -297,7 +297,13 @@ def get(key):
             for k in DEFAULT_CONFIG.keys():
                 if k.startswith(prefix) or (prefix == 'LOG' and k == 'LOG_LEVEL'):
                     val = config_manager.get(k)
-                    click.secho(f"{k}: ", fg="cyan", nl=False)
+                    
+                    # If this key has limited choices, display them as hints
+                    hints = ""
+                    if k in CONFIG_CHOICES:
+                        hints = f" [{' | '.join(map(str, CONFIG_CHOICES[k]))}]"
+                        
+                    click.secho(f"{k}{hints}: ", fg="cyan", nl=False)
                     click.echo(f"{val}")
                     
         if group in ('all', 'logging'):

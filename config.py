@@ -103,6 +103,16 @@ DEFAULT_CONFIG = {
     "HMAC_SECRET_KEY": None
 }
 
+CONFIG_CHOICES = {
+    "LOG_LEVEL": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+    "LOGGING_QUEUE_STRATEGY": ["LOSSY", "LOSSLESS"],
+    "EVENT_QUEUE_STRATEGY": ["LOSSY", "LOSSLESS"],
+    "METRIC_QUEUE_STRATEGY": ["LOSSY", "LOSSLESS"],
+    "LOGGING_DESTINATION": ["CONSOLE", "FILE_LIVE", "FILE_HISTORY", "CONSOLE_AND_FILE_LIVE", "CONSOLE_AND_FILE_HISTORY"],
+    "METRICS_ENABLED": [True, False],
+    "LOGGING_CONSOLE_ENABLED": [True, False]
+}
+
 class ConfigManager:
     _instance = None
     _lock = threading.RLock()
@@ -144,6 +154,24 @@ class ConfigManager:
     def set(self, key, value):
         if isinstance(key, Enum):
             key = key.value
+            
+        if key in CONFIG_CHOICES:
+            valid_choices = CONFIG_CHOICES[key]
+            # Convert boolean strings from CLI to actual booleans if choices are booleans
+            if isinstance(value, str):
+                if value.lower() == 'true': value = True
+                elif value.lower() == 'false': value = False
+            
+            if isinstance(value, str):
+                upper_val = value.upper()
+                upper_choices = {str(c).upper(): c for c in valid_choices}
+                if upper_val not in upper_choices:
+                    raise ValueError(f"Invalid value '{value}' for {key}. Valid options are: {valid_choices}")
+                value = upper_choices[upper_val]
+            else:
+                if value not in valid_choices:
+                    raise ValueError(f"Invalid value '{value}' for {key}. Valid options are: {valid_choices}")
+            
         changed = False
         with self._lock:
             old_value = self._config.get(key)

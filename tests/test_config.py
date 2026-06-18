@@ -32,6 +32,26 @@ class TestConfig(unittest.TestCase):
             data = json.load(f)
         self.assertEqual(data['LOG_LEVEL'], 'INFO')
 
+    def test_config_validation(self):
+        config = ConfigManager()
+        
+        # Valid cases (case insensitive)
+        config.set('LOG_LEVEL', 'critical')
+        self.assertEqual(config.get('LOG_LEVEL'), 'CRITICAL')
+        
+        config.set('METRICS_ENABLED', 'true')
+        self.assertEqual(config.get('METRICS_ENABLED'), True)
+        
+        config.set('METRICS_ENABLED', False)
+        self.assertEqual(config.get('METRICS_ENABLED'), False)
+        
+        # Invalid cases
+        with self.assertRaises(ValueError):
+            config.set('LOG_LEVEL', 'INVALID_LEVEL')
+            
+        with self.assertRaises(ValueError):
+            config.set('EVENT_QUEUE_STRATEGY', 'FAST')
+
     def test_config_reload(self):
         config = ConfigManager()
         config.set('TEST_VAL', 123)
