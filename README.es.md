@@ -207,7 +207,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf add-subfield ...` | Inyecta de forma segura un nuevo campo en un evento existente. |
 | `loggerbuf build` | Ejecuta el Schema Linter y compila los `.proto` a Python. |
 | `loggerbuf config set <key> <value>` | Actualiza la configuración global. Ejemplo: `loggerbuf config set LOG_LEVEL DEBUG` |
-| `loggerbuf config get <key>` | Consulta un valor de configuración global. |
+| `loggerbuf config get <key>` | Consulta un valor de configuración global, o imprime grupos enteros formateados pasando `all`, `logging`, `telemetry` o `metrics`. |
 | `loggerbuf config reset <key>` | Restaura una clave de configuración a su valor predeterminado global. |
 | `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |

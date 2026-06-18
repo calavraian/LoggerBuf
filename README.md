@@ -228,7 +228,7 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf add-subfield ...` | Safely injects a new field into an existing event. |
 | `loggerbuf build` | Runs the Schema Linter and compiles `.proto` files to Python. |
 | `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
-| `loggerbuf config get <key>` | Retrieves the active value for a configuration key. |
+| `loggerbuf config get <key>` | Retrieves the active value for a key, or prints grouped configurations if you pass `all`, `logging`, `telemetry`, or `metrics`. |
 | `loggerbuf config reset <key>` | Resets a configuration key to its global default value. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
