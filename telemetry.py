@@ -6,7 +6,11 @@ import threading
 import time
 from config import ConfigManager, QueueStrategy, ConfigKey
 
-from data_logs import Event, CounterEvent
+import schema_loader
+main_data_pb2 = schema_loader.get_main_data_pb2()
+Event = main_data_pb2.Event
+CounterEvent = main_data_pb2.CounterEvent
+
 from queue_metrics import QueueMetrics, MetricField
 
 class BaseSettings:

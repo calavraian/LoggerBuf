@@ -52,7 +52,12 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
     Runs a heavy concurrent stress test for LoggerBuf with resource monitoring.
     """
     try:
-        from data_logs import Event, EventType, EventStatus
+        import schema_loader
+        main_data_pb2 = schema_loader.get_main_data_pb2()
+        registry_pb2 = schema_loader.get_registry_pb2()
+        Event = main_data_pb2.Event
+        EventType = registry_pb2.EventType
+        EventStatus = registry_pb2.EventStatus
         from debugger import DebuggerLog, StreamLevel, LoggerSettings
         from telemetry import TelemetryLog, EventSettings
         from config import ConfigManager

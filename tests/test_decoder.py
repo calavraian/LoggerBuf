@@ -4,7 +4,8 @@ import time
 import struct
 import pytest
 from telemetry import TelemetryLog, EventSettings
-from data_logs import main_data_pb2
+import schema_loader
+main_data_pb2 = schema_loader.get_main_data_pb2()
 from cli.handlers.decode import decode_file
 import subprocess
 import sys

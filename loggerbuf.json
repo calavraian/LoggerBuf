@@ -10,6 +10,7 @@
     "LOGGING_QUEUE_MAX_SIZE": 10000,
     "LOGGING_QUEUE_STRATEGY": "LOSSY",
     "LOGGING_DESTINATION": "CONSOLE",
+    "PROTOS_DIR": "loggerbuf_schemas",
     "EVENT_BASE_DIR": "events",
     "EVENT_BACKUP_DIR": "history",
     "EVENT_MAIN_FILE_NAME": "events",

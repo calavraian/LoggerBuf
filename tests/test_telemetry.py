@@ -2,7 +2,10 @@ import os
 import time
 import pytest
 from telemetry import TelemetryLog, EventSettings
-from data_logs import main_data_pb2, registry_pb2, event_example_pb2
+import schema_loader
+main_data_pb2 = schema_loader.get_main_data_pb2()
+registry_pb2 = schema_loader.get_registry_pb2()
+demo_event_pb2 = schema_loader.get_module("demo_event_pb2")
 from config import QueueStrategy
 import struct
 
@@ -74,6 +77,7 @@ def test_telemetry_concurrency_lossless(tmp_path):
         event.general_note = f"Event {i}"
         telemetry.send(event)
         
+
     # Wait for the queue to flush
     telemetry._TelemetryLog__event_writer.queue.join()
     time.sleep(0.1)

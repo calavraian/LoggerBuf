@@ -2,7 +2,8 @@ import pytest
 from telemetry import TelemetryLog, EventSettings
 from config import QueueStrategy
 from queue_metrics import MetricField
-from data_logs import main_data_pb2
+import schema_loader
+main_data_pb2 = schema_loader.get_main_data_pb2()
 import time
 import os
 

@@ -4,6 +4,9 @@ from unittest.mock import patch
 from cli.handlers import protos
 from cli.utils import registry
 
+from click.testing import CliRunner
+from cli.console import cli
+
 @pytest.mark.proto
 def test_cli_protos_flow_e2e(tmp_path):
     """
@@ -14,46 +17,50 @@ def test_cli_protos_flow_e2e(tmp_path):
     4. build (implicit in register and init)
     5. deprecate-event
     """
-    # Change current working directory to tmp_path
     original_cwd = os.getcwd()
-    os.chdir(tmp_path)
     
     try:
+        os.chdir(tmp_path)
+        runner = CliRunner()
         # 0. Setup base protos
-        import shutil
-        os.makedirs("data_logs/protos", exist_ok=True)
-        src_status = os.path.join(original_cwd, "data_logs/protos/registry.proto")
-        shutil.copy(src_status, "data_logs/protos/")
+        # (Removed, init does this automatically)
         
         # 1. Init
-        protos.init()
+        result = runner.invoke(cli, ["init"])
+        if result.exit_code != 0:
+            print("INIT FAILED:")
+            print(result.output)
+            print(result.exception)
+            
+        assert os.path.exists("loggerbuf_schemas/main_data.proto")
+        assert os.path.exists("loggerbuf_schemas/.loggerbuf_registry.json")
         
-        assert os.path.exists("data_logs/protos/main_data.proto")
-        assert os.path.exists("data_logs/protos/.loggerbuf_registry.json")
+        # 2. Create Event
+        runner.invoke(cli, ["create-event", "TestUserEvent", "--field", "test_field_1:string", "--field", "test_field_2:int32"])
+        assert os.path.exists("loggerbuf_schemas/testuserevent_event.proto")
         
-        # 2. Create Event via parameterized input
-        protos.create_event("TestSubEvent", [("val", "string"), ("num", "int32")])
-        assert os.path.exists("data_logs/protos/testsubevent_event.proto")
-        
-        protos.register_event("test_sub_event", "TestSubEvent", "testsubevent_event.proto")
+        # 3. Register Event
+        result = runner.invoke(cli, ["register-event", "test_user_event", "TestUserEvent", "--file", "testuserevent_event.proto"])
+        assert "registered and compiled successfully" in result.output
         
         # Verify Registry
         data = registry.get_registry()
-        assert "test_sub_event" in data["events"]
-        assert data["events"]["test_sub_event"]["index"] == 11
-        assert data["events"]["test_sub_event"]["deprecated"] is False
+        assert "test_user_event" in data["events"]
+        assert data["events"]["test_user_event"]["index"] == 11
+        assert data["events"]["test_user_event"]["deprecated"] is False
         
         # Verify generated files
-        assert os.path.exists("data_logs/main_data_pb2.py")
-        assert os.path.exists("data_logs/testsubevent_event_pb2.py")
+        assert os.path.exists("loggerbuf_schemas/main_data_pb2.py")
+        assert os.path.exists("loggerbuf_schemas/testuserevent_event_pb2.py")
         
         # 4. Deprecate Event
-        protos.deprecate_event("test_sub_event")
+        result = runner.invoke(cli, ["deprecate-event", "test_user_event"])
+        assert "deprecated successfully" in result.output
         data = registry.get_registry()
-        assert data["events"]["test_sub_event"]["deprecated"] is True
+        assert data["events"]["test_user_event"]["deprecated"] is True
         
         # Check if main_data.proto has [deprecated = true]
-        with open("data_logs/protos/main_data.proto", "r") as f:
+        with open("loggerbuf_schemas/main_data.proto", "r") as f:
             content = f.read()
             assert "[deprecated = true]" in content
             

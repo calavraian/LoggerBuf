@@ -1,13 +1,13 @@
 syntax = "proto3";
 
 /**
-* This is a generic sub-event just for example
-* porpuses, you can create your own sub-events
-* by creating a new file in the protos folder.
+* This is a demo User Event provided as an example.
+* You can create your own User Events by creating 
+* new .proto files in this directory.
 *
-* This fil can be removed or edited as you wish.
+* This file can be removed or edited as you wish.
 */
-message ExampleSubEvent {
+message DemoUserEvent {
     enum OperationType {
         OPERATION_UNSPECIFIED = 0;
         OPERATION_DATA_READ = 1;

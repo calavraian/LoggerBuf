@@ -9,11 +9,21 @@ def runner():
     return CliRunner()
 
 @patch('cli.console.protos')
-def test_init(mock_protos, runner):
+@patch('cli.console.ConfigManager')
+def test_protos_init(mock_cm, mock_protos, runner):
+    mock_cm.return_value.get.return_value = "test_dir"
+    result = runner.invoke(cli, ['protos-init'])
+    assert result.exit_code == 0
+    assert "created and initialized successfully" in result.output
+    mock_protos.init.assert_called_once()
+
+@patch('cli.console.build')
+@patch('cli.console.protos_init')
+@patch('cli.console.config_init')
+def test_init(mock_c_init, mock_p_init, mock_build, runner):
     result = runner.invoke(cli, ['init'])
     assert result.exit_code == 0
-    assert "LoggerBuf initialized successfully" in result.output
-    mock_protos.init.assert_called_once()
+    assert "Project initialized successfully" in result.output
 
 @patch('cli.console.protos')
 def test_build(mock_protos, runner):
@@ -46,7 +56,7 @@ def test_create_event_interactive(mock_protos, runner):
 @patch('cli.console.protos')
 def test_exceptions_in_commands(mock_protos, runner):
     mock_protos.init.side_effect = Exception("init error")
-    result = runner.invoke(cli, ['init'])
+    result = runner.invoke(cli, ['protos-init'])
     assert result.exit_code == 1
     assert "Error: init error" in result.output
     
@@ -145,14 +155,14 @@ def test_stress_test(mock_stress, runner):
     assert call_kwargs['num_threads'] == 5
     assert call_kwargs['total_writes'] == 500
 
-@patch('cli.console.ConfigManager')
+@patch('config.ConfigManager')
 def test_config_init(mock_cm_class, runner):
     result = runner.invoke(cli, ['config', 'init'])
     assert result.exit_code == 0
     assert "is ready" in result.output
     mock_cm_class.assert_called_once()
 
-@patch('cli.console.ConfigManager')
+@patch('config.ConfigManager')
 def test_config_init_error(mock_cm_class, runner):
     mock_cm_class.side_effect = Exception("init config error")
     result = runner.invoke(cli, ['config', 'init'])

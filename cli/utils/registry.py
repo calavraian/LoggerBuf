@@ -2,7 +2,10 @@ import json
 import hashlib
 import os
 
-REGISTRY_FILE = "data_logs/protos/.loggerbuf_registry.json"
+from config import ConfigManager
+
+def get_registry_file():
+    return os.path.join(ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas"), ".loggerbuf_registry.json")
 
 class RegistryCorruptedException(Exception):
     pass
@@ -14,10 +17,11 @@ def _calculate_hash(data: dict) -> str:
 
 def get_registry() -> dict:
     """Reads and validates the registry. If it does not exist, raises FileNotFoundError."""
-    if not os.path.exists(REGISTRY_FILE):
-        raise FileNotFoundError(f"Registry not found at {REGISTRY_FILE}. Please run 'loggerbuf init' first.")
+    registry_file = get_registry_file()
+    if not os.path.exists(registry_file):
+        raise FileNotFoundError(f"Registry not found at {registry_file}. Please run 'loggerbuf init' first.")
     
-    with open(REGISTRY_FILE, "r") as f:
+    with open(registry_file, "r") as f:
         content = json.load(f)
         
     if "hash" not in content or "data" not in content:
@@ -34,19 +38,21 @@ def get_registry() -> dict:
 
 def save_registry(data: dict):
     """Saves the registry securely by signing it with its hash."""
+    registry_file = get_registry_file()
     # Ensure directory exists
-    os.makedirs(os.path.dirname(REGISTRY_FILE), exist_ok=True)
+    os.makedirs(os.path.dirname(registry_file), exist_ok=True)
     
     payload = {
         "hash": _calculate_hash(data),
         "data": data
     }
-    with open(REGISTRY_FILE, "w") as f:
+    with open(registry_file, "w") as f:
         json.dump(payload, f, indent=2, sort_keys=True)
 
 def init_registry():
     """Creates an initial registry if it doesn't exist."""
-    if os.path.exists(REGISTRY_FILE):
+    registry_file = get_registry_file()
+    if os.path.exists(registry_file):
         return
     initial_data = {
         "next_index": 11,

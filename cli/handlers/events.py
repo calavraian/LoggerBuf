@@ -2,16 +2,17 @@ import os
 import re
 import click
 from typing import List
+from cli.handlers.protos import get_protos_dir
 
-PROTO_DIR = "data_logs/protos"
-REGISTRY_PROTO = os.path.join(PROTO_DIR, "registry.proto")
+def _get_registry_proto() -> str:
+    return os.path.join(get_protos_dir(), "registry.proto")
 
 def _read_proto() -> str:
-    with open(REGISTRY_PROTO, "r") as f:
+    with open(_get_registry_proto(), "r") as f:
         return f.read()
 
 def _write_proto(content: str):
-    with open(REGISTRY_PROTO, "w") as f:
+    with open(_get_registry_proto(), "w") as f:
         f.write(content)
 
 def _get_max_value(enum_content: str) -> int:

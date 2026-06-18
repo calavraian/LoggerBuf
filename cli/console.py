@@ -13,15 +13,84 @@ def cli():
     """LoggerBuf CLI - Asynchronous Telemetry Framework."""
     pass
 
-@cli.command()
-def init():
-    """Initializes the Protos structure and the Registry."""
+@cli.command(name="protos-init")
+def protos_init():
+    """Initializes the Protos structure and the Registry in the local project."""
     try:
-        protos.init()
-        click.secho("LoggerBuf initialized successfully.", fg="green")
+        from config import ConfigManager
+        protos_dir = ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas")
+        import os
+        if os.path.exists(protos_dir) and os.listdir(protos_dir):
+            click.secho(f"[{protos_dir}] is already initialized.", fg="green")
+        else:
+            protos.init()
+            click.secho(f"[{protos_dir}] created and initialized successfully.", fg="green")
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
+
+@cli.command()
+@click.pass_context
+def init(ctx):
+    """Bootstraps a new LoggerBuf project in a single command."""
+    click.secho("Starting LoggerBuf project initialization...", fg="cyan")
+    try:
+        ctx.invoke(config_init)
+        ctx.invoke(protos_init)
+        ctx.invoke(build)
+        click.secho("Project initialized successfully! You are ready to log.", fg="green", bold=True)
+    except Exception as e:
+        click.secho(f"Initialization failed: {e}", fg="red")
+        sys.exit(1)
+
+@cli.command(name="factory-reset")
+@click.option('--hard', is_flag=True, help="Permanently delete setup files without creating a backup.")
+def factory_reset(hard):
+    """Resets the LoggerBuf configuration and schemas to ground zero."""
+    import os
+    import shutil
+    import datetime
+    from config import CONFIG_FILE, ConfigManager
+    
+    click.secho("WARNING: This command will reset your entire LoggerBuf configuration and schemas.", fg="red", bold=True)
+    click.secho("Log data files will NOT be affected.\n", fg="yellow")
+    
+    config_mgr = ConfigManager()
+    challenge_key = "LOGGING_BASE_DIR"
+    challenge_value = str(config_mgr.get(challenge_key))
+    
+    click.secho(f"[Security] To confirm the reset, please type the current value of '{challenge_key}':", fg="cyan")
+    response = click.prompt("Value", type=str)
+    
+    if response != challenge_value:
+        click.secho("Challenge failed. Factory reset aborted.", fg="red")
+        sys.exit(1)
+        
+    protos_dir = config_mgr.get("PROTOS_DIR", "loggerbuf_schemas")
+    
+    if not hard:
+        backup_dir = f"loggerbuf_backup_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        os.makedirs(backup_dir, exist_ok=True)
+        
+        if os.path.exists(CONFIG_FILE):
+            shutil.copy(CONFIG_FILE, backup_dir)
+            
+        if os.path.exists(protos_dir):
+            backup_protos = os.path.join(backup_dir, "schemas")
+            os.makedirs(backup_protos, exist_ok=True)
+            for f in os.listdir(protos_dir):
+                if f.endswith(".proto") or f.endswith(".json"):
+                    shutil.copy(os.path.join(protos_dir, f), backup_protos)
+                    
+        click.secho(f"Backup created at: {backup_dir}/", fg="green")
+        
+    # Delete
+    if os.path.exists(CONFIG_FILE):
+        os.remove(CONFIG_FILE)
+    if os.path.exists(protos_dir):
+        shutil.rmtree(protos_dir)
+        
+    click.secho("Factory reset complete. The project has been wiped clean.", fg="green", bold=True)
 
 @cli.command()
 def build():
@@ -168,10 +237,10 @@ def config():
     """Manage LoggerBuf global configurations (loggerbuf.json)."""
     pass
 
-@config.command()
-def init():
+@config.command(name="init")
+def config_init():
     """Generates the default loggerbuf.json configuration file."""
-    from config import CONFIG_FILE
+    from config import CONFIG_FILE, ConfigManager
     try:
         config_mgr = ConfigManager()
         click.secho(f"Configuration file '{CONFIG_FILE}' is ready.", fg="green")

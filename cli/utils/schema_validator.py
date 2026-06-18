@@ -3,8 +3,13 @@ import json
 import subprocess
 from google.protobuf import descriptor_pb2
 
-SNAPSHOT_FILE = "data_logs/protos/.loggerbuf_schema_snapshot.json"
-TEMP_DESC_FILE = "data_logs/protos/.temp_desc.pb"
+from config import ConfigManager
+
+def get_snapshot_file():
+    return os.path.join(ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas"), ".loggerbuf_schema_snapshot.json")
+
+def get_temp_desc_file():
+    return os.path.join(ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas"), ".temp_desc.pb")
 
 class SchemaValidationError(Exception):
     pass
@@ -31,13 +36,15 @@ def _extract_schema_from_descriptor(desc_path: str) -> dict:
     return schema
 
 def _load_snapshot() -> dict:
-    if not os.path.exists(SNAPSHOT_FILE):
+    snapshot_file = get_snapshot_file()
+    if not os.path.exists(snapshot_file):
         return {}
-    with open(SNAPSHOT_FILE, "r") as f:
+    with open(snapshot_file, "r") as f:
         return json.load(f)
 
 def _save_snapshot(schema: dict):
-    with open(SNAPSHOT_FILE, "w") as f:
+    snapshot_file = get_snapshot_file()
+    with open(snapshot_file, "w") as f:
         json.dump(schema, f, indent=2, sort_keys=True)
 
 def validate_and_snapshot(proto_dir: str):
@@ -50,10 +57,11 @@ def validate_and_snapshot(proto_dir: str):
     if not proto_files:
         return # Nothing to validate
         
+    temp_desc_file = get_temp_desc_file()
     cmd = [
         "protoc",
         f"--proto_path={proto_dir}",
-        f"--descriptor_set_out={TEMP_DESC_FILE}",
+        f"--descriptor_set_out={temp_desc_file}",
         "--include_imports"
     ] + [os.path.join(proto_dir, f) for f in proto_files]
     
@@ -64,10 +72,10 @@ def validate_and_snapshot(proto_dir: str):
 
     # 2. Extract new schema
     try:
-        new_schema = _extract_schema_from_descriptor(TEMP_DESC_FILE)
+        new_schema = _extract_schema_from_descriptor(temp_desc_file)
     finally:
-        if os.path.exists(TEMP_DESC_FILE):
-            os.remove(TEMP_DESC_FILE)
+        if os.path.exists(temp_desc_file):
+            os.remove(temp_desc_file)
 
     # 3. Load old schema
     old_schema = _load_snapshot()

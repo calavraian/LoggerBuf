@@ -18,12 +18,12 @@ enum EventStatus {
     STATUS_FAILED = 4;
     STATUS_ABORTED = 5;
 
-    // Specific statuses for the example event
+    // Specific statuses for the demo user event
     // Range: 51-100
     // Next value: 54
-    EXAMPLE_EVENT_STATUS_STARTED = 51;
-    EXAMPLE_EVENT_STATUS_COMPLETED = 52;
-    EXAMPLE_EVENT_STATUS_FAILED = 53;
+    DEMO_EVENT_STATUS_STARTED = 51;
+    DEMO_EVENT_STATUS_COMPLETED = 52;
+    DEMO_EVENT_STATUS_FAILED = 53;
 }
 
 /**
@@ -42,13 +42,13 @@ enum EventType {
     EVENT_API_REQUEST = 4;
     EVENT_API_RESPONSE = 5;
 
-    // Specific event types for the example event
+    // Specific event types for the demo user event
     // Range: 101-200
     // Next value: 106
-    EXAMPLE_EVENT_API_INVOKED = 101;
-    EXAMPLE_EVENT_API_RESPONSE = 102;
-    EXAMPLE_EVENT_DATA_PROCESSED = 104;
-    EXAMPLE_EVENT_DATA_STORED = 105;
+    DEMO_EVENT_API_INVOKED = 101;
+    DEMO_EVENT_API_RESPONSE = 102;
+    DEMO_EVENT_DATA_PROCESSED = 104;
+    DEMO_EVENT_DATA_STORED = 105;
 }
 
 /**

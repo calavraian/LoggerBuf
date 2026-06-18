@@ -2,16 +2,17 @@ import os
 import glob
 import re
 import sys
-from cli.handlers.protos import PROTO_DIR, build
+from cli.handlers.protos import build, get_protos_dir
 
 def _find_file_for_message(message_name: str, file_name: str = None) -> str:
+    protos_dir = get_protos_dir()
     if file_name:
-        path = os.path.join(PROTO_DIR, file_name)
+        path = os.path.join(protos_dir, file_name)
         if not os.path.exists(path):
-            raise FileNotFoundError(f"File '{file_name}' not found in {PROTO_DIR}.")
+            raise FileNotFoundError(f"File '{file_name}' not found in {protos_dir}.")
         return path
         
-    files = glob.glob(os.path.join(PROTO_DIR, "*.proto"))
+    files = glob.glob(os.path.join(protos_dir, "*.proto"))
     matches = []
     
     for f in files:
