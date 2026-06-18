@@ -286,8 +286,33 @@ def reset(key):
 @config.command()
 @click.argument('key')
 def get(key):
-    """Gets a configuration value from loggerbuf.json or default."""
+    """Gets a configuration value, or group (all, logging, telemetry, metrics)."""
+    from config import DEFAULT_CONFIG
     config_manager = ConfigManager()
+    
+    group = key.lower()
+    if group in ('all', 'logging', 'telemetry', 'metrics'):
+        def print_group(prefix, title, color):
+            click.secho(f"\n--- {title} ---", fg=color, bold=True)
+            for k in DEFAULT_CONFIG.keys():
+                if k.startswith(prefix) or (prefix == 'LOG' and k == 'LOG_LEVEL'):
+                    val = config_manager.get(k)
+                    click.secho(f"{k}: ", fg="cyan", nl=False)
+                    click.echo(f"{val}")
+                    
+        if group in ('all', 'logging'):
+            print_group('LOG', 'LOGGING (DEBUGGER) SETTINGS', 'green')
+        if group in ('all', 'telemetry'):
+            print_group('EVENT_', 'TELEMETRY (EVENTS) SETTINGS', 'blue')
+        if group in ('all', 'metrics'):
+            print_group('METRIC_', 'METRICS (COUNTERS) SETTINGS', 'magenta')
+        if group == 'all':
+            print_group('STRESS_', 'STRESS TEST SETTINGS', 'yellow')
+            print_group('HMAC_', 'SECURITY SETTINGS', 'red')
+            
+        click.echo("")
+        return
+
     value = config_manager.get(key)
     if value is not None:
         click.echo(value)

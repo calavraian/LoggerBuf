@@ -184,6 +184,28 @@ def test_config_set_get(mock_cm_class, runner):
     assert result.exit_code == 0
     mock_cm.set.assert_called_with('NUM', 42)
 
+    # Test groups
+    result = runner.invoke(cli, ['config', 'get', 'all'])
+    assert result.exit_code == 0
+    assert "LOGGING (DEBUGGER) SETTINGS" in result.output
+    assert "TELEMETRY (EVENTS) SETTINGS" in result.output
+    assert "METRICS (COUNTERS) SETTINGS" in result.output
+    
+    result = runner.invoke(cli, ['config', 'get', 'logging'])
+    assert result.exit_code == 0
+    assert "LOGGING (DEBUGGER) SETTINGS" in result.output
+    assert "TELEMETRY" not in result.output
+    
+    result = runner.invoke(cli, ['config', 'get', 'telemetry'])
+    assert result.exit_code == 0
+    assert "TELEMETRY (EVENTS) SETTINGS" in result.output
+    assert "LOGGING" not in result.output
+    
+    result = runner.invoke(cli, ['config', 'get', 'metrics'])
+    assert result.exit_code == 0
+    assert "METRICS (COUNTERS) SETTINGS" in result.output
+    assert "TELEMETRY" not in result.output
+
 @patch('cli.console.ConfigManager')
 def test_config_get_not_found(mock_cm_class, runner):
     mock_cm = MagicMock()
