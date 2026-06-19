@@ -323,7 +323,7 @@ class TelemetryLog:
                         f"LoggerBuf: You are sending telemetry using a DEPRECATED field '{field_path}'."
                     )
                 if field_descriptor.type == field_descriptor.TYPE_MESSAGE:
-                    if field_descriptor.label == field_descriptor.LABEL_REPEATED:
+                    if field_descriptor.is_repeated:
                         for idx, item in enumerate(value):
                             _check_deprecated_fields(item, f"{field_path}[{idx}].")
                     else:
