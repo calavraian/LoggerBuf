@@ -233,17 +233,30 @@ class BaseBackgroundWriter:
         current_date_str = (last_date or current_date).strftime("%Y-%m-%d")
         backup_subdir = os.path.join(self.full_path_logs, self.settings.get_backup_dir(), current_date_str)
         os.makedirs(backup_subdir, exist_ok=True)
-        base_name = f"{self.settings.get_main_file_name()}_{self.settings.get_name()}"
+        base_name = f"{self.settings.get_main_file_name()}_{self.settings.get_name()}_{current_date_str}.log"
         
-        index = 1
-        while True:
-            backup_filename = os.path.join(backup_subdir, f"{base_name}_{current_date_str}.log.{index}.gz")
-            if not os.path.exists(backup_filename):
-                break
-            index += 1
-            if index > 1000:
-                break
+        max_backups = self.settings.get_max_backups()
         
+        # 1. Delete the oldest backup if it exists
+        oldest_backup = os.path.join(backup_subdir, f"{base_name}.{max_backups}.gz")
+        if os.path.exists(oldest_backup):
+            try:
+                os.remove(oldest_backup)
+            except Exception:
+                pass
+                
+        # 2. Shift all existing backups up by one index
+        for i in range(max_backups - 1, 0, -1):
+            sfn = os.path.join(backup_subdir, f"{base_name}.{i}.gz")
+            dfn = os.path.join(backup_subdir, f"{base_name}.{i + 1}.gz")
+            if os.path.exists(sfn):
+                try:
+                    os.rename(sfn, dfn)
+                except Exception:
+                    pass
+        
+        # 3. Compress current file to index 1
+        backup_filename = os.path.join(backup_subdir, f"{base_name}.1.gz")
         try:
             with open(self.current_filename, 'rb') as sf, gzip.open(backup_filename, 'wb') as df:
                 df.write(sf.read())
