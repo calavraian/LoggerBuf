@@ -402,7 +402,11 @@ def get(key):
 
     value = config_manager.get(key)
     if value is not None:
-        click.echo(value)
+        hints = ""
+        if key in CONFIG_CHOICES:
+            hints = f" [{' | '.join(map(str, CONFIG_CHOICES[key]))}]"
+        click.secho(f"{key}{hints}: ", fg="cyan", nl=False)
+        click.echo(f"{value}")
     else:
         click.secho(f"Key '{key}' not found in config or defaults.", fg="red")
 
