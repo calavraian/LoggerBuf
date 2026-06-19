@@ -3,6 +3,10 @@ import sys
 import importlib.util
 from .config import ConfigManager
 
+# Ensure the current working directory is in sys.path so CLI tools can natively import local schema packages
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
+
 def _load_module(module_name, protos_dir):
     """Dynamically loads a module from the given directory."""
     # 1. Attempt native package import first to prevent duplicate descriptor pool registrations
