@@ -14,12 +14,13 @@ CounterEvent = main_data_pb2.CounterEvent
 from .queue_metrics import QueueMetrics, MetricField
 
 class BaseSettings:
-    def __init__(self, prefix: str, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
+    def __init__(self, prefix: str, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None, backup_count: int = None):
         config = ConfigManager()
         self.prefix = prefix
         self.__name = name if name is not None else config.get(f'{prefix}_LOGGER_NAME')
         self.__logs_base_dir = logs_base_dir
         self.__backup_dir = backup_dir if backup_dir is not None else config.get(f'{prefix}_BACKUP_DIR')
+        self.__backup_count = backup_count if backup_count is not None else config.get(f'{prefix}_BACKUP_COUNT')
         self.__file_size = file_size if file_size is not None else config.get(f'{prefix}_FILE_SIZE')
         self.__base_dir = config.get(f'{prefix}_BASE_DIR')
         self.__main_file_name = config.get(f'{prefix}_MAIN_FILE_NAME')
@@ -29,6 +30,7 @@ class BaseSettings:
     def get_name(self): return self.__name
     def get_logs_base_dir(self): return self.__logs_base_dir
     def get_backup_dir(self): return self.__backup_dir
+    def get_backup_count(self): return self.__backup_count
     def get_file_size(self): return self.__file_size
     def get_base_dir(self): return self.__base_dir
     def get_main_file_name(self): return self.__main_file_name
@@ -37,12 +39,12 @@ class BaseSettings:
 
 
 class EventSettings(BaseSettings):
-    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
-        super().__init__("EVENT", name, logs_base_dir, backup_dir, file_size)
+    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None, backup_count: int = None):
+        super().__init__("EVENT", name, logs_base_dir, backup_dir, file_size, backup_count)
 
 class MetricSettings(BaseSettings):
-    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None):
-        super().__init__("METRIC", name, logs_base_dir, backup_dir, file_size)
+    def __init__(self, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None, backup_count: int = None):
+        super().__init__("METRIC", name, logs_base_dir, backup_dir, file_size, backup_count)
 
 
 class BaseBackgroundWriter:
@@ -235,7 +237,7 @@ class BaseBackgroundWriter:
         os.makedirs(backup_subdir, exist_ok=True)
         base_name = f"{self.settings.get_main_file_name()}_{self.settings.get_name()}_{current_date_str}.log"
         
-        max_backups = self.settings.get_max_backups()
+        max_backups = self.settings.get_backup_count()
         
         # 1. Delete the oldest backup if it exists
         oldest_backup = os.path.join(backup_subdir, f"{base_name}.{max_backups}.gz")
