@@ -19,14 +19,16 @@ pip install loggerbuf
 ```
 
 **2. Initialize the Project:**
-To bootstrap your LoggerBuf project, simply run the master init command:
+To prep your LoggerBuf project, simply run the master command:
 ```bash
 loggerbuf init
 ```
-This command performs a full project initialization step-by-step:
-1. `config init`: Generates `loggerbuf.json` so you can customize settings.
-2. `protos-init`: Creates the local `loggerbuf_schemas/` directory with the required base schemas.
-3. `build`: Compiles the Python classes automatically.
+This command automatically performs a step-by-step initialization:
+1. `loggerbuf config init`: Generates `loggerbuf.json` to customize settings.
+2. `loggerbuf protos init`: Creates the local `loggerbuf_schemas/` directory with the base schemas.
+3. `loggerbuf build`: Compiles the Python classes automatically.
+
+> **[Total Control Note]** If you prefer, instead of using `loggerbuf init`, you can run each of those 3 steps manually one by one. This gives you greater control over each phase of the initialization before the final build.
 
 You are now ready to log! You can also run these sub-commands individually if you prefer an iterative setup.
 
@@ -227,20 +229,16 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 
 | Command | Description |
 |---|---|
-| `loggerbuf init` | Master command to bootstrap configuration and schemas all at once. |
+| `loggerbuf init` | Master command that initializes configuration and schemas at once. |
 | `loggerbuf config init` | Generates the default `loggerbuf.json` configuration file. |
-| `loggerbuf protos-init` | Initializes the `loggerbuf_schemas/` structure and Registry in the local project. |
-| `loggerbuf factory-reset` | Securely resets the project configuration and schemas to ground zero (requires a security challenge, leaves historical logs untouched). |
-| `loggerbuf create-event <Name>` | Scaffolds a new `.proto` file for a custom event. |
-| `loggerbuf register-event <Name>`| Links your custom event into the `main_data.proto` pipeline. |
-| `loggerbuf add-subfield ...` | Safely injects a new field into an existing event. |
-| `loggerbuf build` | Runs the Schema Linter and compiles `.proto` files to Python. |
+| `loggerbuf protos init` | Initializes the `loggerbuf_schemas/` directory with base schemas (does not compile). |
+| `loggerbuf build` (or `protos build`) | Runs the Schema Linter and compiles `.proto` to Python, generating an `__init__.py` facade. |
+| `loggerbuf factory-reset` | Safely resets configuration and schemas to their original state (requires security challenge, preserves your historical logs). |
 | `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Retrieves the active value for a key, or prints grouped configurations if you pass `all`, `logging`, `telemetry`, or `metrics`. |
 | `loggerbuf config reset <key>` | Resets a configuration key to its global default value. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
-| `loggerbuf event add-status <Type> <Status>`| Adds a new `EventStatus` specifically under an `EventType`. |
 | `loggerbuf add-counter-type <Type>` | Adds a new counter type to your `registry.proto`. Supports ranges via `--start` and `--end`. |
 | `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 

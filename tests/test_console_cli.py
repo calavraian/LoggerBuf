@@ -12,13 +12,13 @@ def runner():
 @patch('cli.console.ConfigManager')
 def test_protos_init(mock_cm, mock_protos, runner):
     mock_cm.return_value.get.return_value = "test_dir"
-    result = runner.invoke(cli, ['protos-init'])
+    result = runner.invoke(cli, ['protos', 'init'])
     assert result.exit_code == 0
     assert "created and initialized successfully" in result.output
     mock_protos.init.assert_called_once()
 
 @patch('cli.console.build')
-@patch('cli.console.protos_init')
+@patch('cli.console.protos_init_cmd')
 @patch('cli.console.config_init')
 def test_init(mock_c_init, mock_p_init, mock_build, runner):
     result = runner.invoke(cli, ['init'])
@@ -56,7 +56,7 @@ def test_create_event_interactive(mock_protos, runner):
 @patch('cli.console.protos')
 def test_exceptions_in_commands(mock_protos, runner):
     mock_protos.init.side_effect = Exception("init error")
-    result = runner.invoke(cli, ['protos-init'])
+    result = runner.invoke(cli, ['protos', 'init'])
     assert result.exit_code == 1
     assert "Error: init error" in result.output
     

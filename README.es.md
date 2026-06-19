@@ -23,12 +23,12 @@ Para preparar tu proyecto LoggerBuf, simplemente ejecuta el comando maestro:
 ```bash
 loggerbuf init
 ```
-Este comando realiza la inicialización paso a paso:
-1. `config init`: Genera `loggerbuf.json` para personalizar ajustes.
-2. `protos-init`: Crea el directorio local `loggerbuf_schemas/` con los esquemas base.
-3. `build`: Compila las clases de Python automáticamente.
+Este comando realiza la inicialización paso a paso automáticamente:
+1. `loggerbuf config init`: Genera `loggerbuf.json` para personalizar ajustes.
+2. `loggerbuf protos init`: Crea el directorio local `loggerbuf_schemas/` con los esquemas base.
+3. `loggerbuf build`: Compila las clases de Python automáticamente.
 
-¡Ya estás listo para empezar! También puedes ejecutar estos sub-comandos de manera individual si prefieres una configuración manual.
+> **[Nota de Control Total]** Si lo prefieres, en lugar de usar `loggerbuf init`, puedes ejecutar cada uno de esos 3 pasos anteriores manualmente uno por uno. Esto te da un mayor control sobre cada fase de la inicialización antes de la compilación final.
 
 ---
 
@@ -208,7 +208,8 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 |---|---|
 | `loggerbuf init` | Comando maestro que inicializa configuración y esquemas a la vez. |
 | `loggerbuf config init` | Genera el archivo de configuración `loggerbuf.json` por defecto. |
-| `loggerbuf protos-init` | Inicializa el directorio `loggerbuf_schemas/` y el Registry local. |
+| `loggerbuf protos init` | Inicializa el directorio `loggerbuf_schemas/` con los esquemas base (no compila). |
+| `loggerbuf build` (o `protos build`) | Ejecuta el Schema Linter y compila los `.proto` a Python generando una fachada `__init__.py`. |
 | `loggerbuf factory-reset` | Reinicia de forma segura la configuración y los esquemas a su estado original (requiere verificación de seguridad, preserva tus logs históricos). |
 | `loggerbuf create-event <Name>` | Crea una plantilla `.proto` para un nuevo evento. |
 | `loggerbuf register-event <Name>`| Vincula tu evento en el pipeline `main_data.proto`. |

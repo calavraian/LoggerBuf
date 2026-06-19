@@ -13,8 +13,13 @@ def cli():
     """LoggerBuf CLI - Asynchronous Telemetry Framework."""
     pass
 
-@cli.command(name="protos-init")
-def protos_init():
+@cli.group(name="protos")
+def protos_group():
+    """Manage Protocol Buffers schemas."""
+    pass
+
+@protos_group.command(name="init")
+def protos_init_cmd():
     """Initializes the Protos structure and the Registry in the local project."""
     try:
         from config import ConfigManager
@@ -36,7 +41,7 @@ def init(ctx):
     click.secho("Starting LoggerBuf project initialization...", fg="cyan")
     try:
         ctx.invoke(config_init)
-        ctx.invoke(protos_init)
+        ctx.invoke(protos_init_cmd)
         ctx.invoke(build)
         click.secho("Project initialized successfully! You are ready to log.", fg="green", bold=True)
     except Exception as e:
@@ -101,6 +106,13 @@ def build():
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
+
+# Alias for 'build' inside the 'protos' group
+@protos_group.command(name="build")
+@click.pass_context
+def protos_build(ctx):
+    """Rebuilds main_data.proto and compiles all classes (alias for 'loggerbuf build')."""
+    ctx.invoke(build)
 
 @cli.command()
 @click.argument('name')
