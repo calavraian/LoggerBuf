@@ -3,7 +3,7 @@ import time
 import json
 import csv
 import io
-from queue_metrics import QueueMetrics, MetricField
+from loggerbuf.queue_metrics import QueueMetrics, MetricField
 
 def test_queue_metrics_initialization():
     metrics = QueueMetrics()

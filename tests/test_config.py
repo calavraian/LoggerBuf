@@ -1,8 +1,8 @@
 import unittest
 import os
 import json
-from config import ConfigManager, CONFIG_FILE
-from debugger import DebuggerLog, LogLevel
+from loggerbuf.config import ConfigManager, CONFIG_FILE
+from loggerbuf.debugger import DebuggerLog, LogLevel
 import logging
 
 class TestConfig(unittest.TestCase):

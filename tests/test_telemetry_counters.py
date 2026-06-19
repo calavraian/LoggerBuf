@@ -1,6 +1,6 @@
 import pytest
-from telemetry import TelemetryLog, EventSettings, MetricSettings
-from config import ConfigManager
+from loggerbuf.telemetry import TelemetryLog, EventSettings, MetricSettings
+from loggerbuf.config import ConfigManager
 import time
 import os
 
@@ -36,7 +36,7 @@ def test_metric_file_separation_and_increment(tmp_path):
     config.set('METRICS_ENABLED', True)
     
     # We must clear the TelemetryLog instances cache for a clean test because it is a singleton based on name
-    import telemetry as tel
+    import loggerbuf.telemetry as tel
     tel.TelemetryLog._TelemetryLog__instances.clear()
 
     settings = EventSettings(name=f"TEST_SEP_{tmp_path.name}", logs_base_dir=str(tmp_path))

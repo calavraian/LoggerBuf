@@ -1,8 +1,8 @@
 import pytest
-from telemetry import TelemetryLog, EventSettings
-from config import QueueStrategy
-from queue_metrics import MetricField
-import schema_loader
+from loggerbuf.telemetry import TelemetryLog, EventSettings
+from loggerbuf.config import QueueStrategy
+from loggerbuf.queue_metrics import MetricField
+from loggerbuf import schema_loader
 main_data_pb2 = schema_loader.get_main_data_pb2()
 import time
 import os
@@ -99,7 +99,7 @@ def test_telemetry_get_date_last_record(tmp_path):
     time.sleep(0.1)
     
     # Now simulate a new writer reading this existing file
-    from telemetry import EventWriter
+    from loggerbuf.telemetry import EventWriter
     import datetime
     new_writer = EventWriter(settings)
     assert new_writer._cached_last_date == datetime.datetime.now().date()

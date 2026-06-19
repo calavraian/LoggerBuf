@@ -1,12 +1,12 @@
 import os
 import time
 import pytest
-from telemetry import TelemetryLog, EventSettings
-import schema_loader
+from loggerbuf.telemetry import TelemetryLog, EventSettings
+from loggerbuf import schema_loader
 main_data_pb2 = schema_loader.get_main_data_pb2()
 registry_pb2 = schema_loader.get_registry_pb2()
 demo_event_pb2 = schema_loader.get_module("demo_event_pb2")
-from config import QueueStrategy
+from loggerbuf.config import QueueStrategy
 import struct
 
 class DummyTelemetryCaller:

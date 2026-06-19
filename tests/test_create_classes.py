@@ -1,11 +1,11 @@
 import pytest
 import os
 from unittest.mock import patch
-from cli.handlers import protos
-from cli.utils import registry
+from loggerbuf.cli.handlers import protos
+from loggerbuf.cli.utils import registry
 
 from click.testing import CliRunner
-from cli.console import cli
+from loggerbuf.cli.console import cli
 
 @pytest.mark.proto
 def test_cli_protos_flow_e2e(tmp_path):

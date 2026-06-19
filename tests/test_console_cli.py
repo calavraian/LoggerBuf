@@ -2,14 +2,14 @@ import pytest
 from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
 
-from cli.console import cli
+from loggerbuf.cli.console import cli
 
 @pytest.fixture
 def runner():
     return CliRunner()
 
-@patch('cli.console.protos')
-@patch('cli.console.ConfigManager')
+@patch('loggerbuf.cli.console.protos')
+@patch('loggerbuf.cli.console.ConfigManager')
 def test_protos_init(mock_cm, mock_protos, runner):
     mock_cm.return_value.get.return_value = "test_dir"
     result = runner.invoke(cli, ['protos', 'init'])
@@ -17,43 +17,43 @@ def test_protos_init(mock_cm, mock_protos, runner):
     assert "created and initialized successfully" in result.output
     mock_protos.init.assert_called_once()
 
-@patch('cli.console.build')
-@patch('cli.console.protos_init_cmd')
-@patch('cli.console.config_init')
+@patch('loggerbuf.cli.console.build')
+@patch('loggerbuf.cli.console.protos_init_cmd')
+@patch('loggerbuf.cli.console.config_init')
 def test_init(mock_c_init, mock_p_init, mock_build, runner):
     result = runner.invoke(cli, ['init'])
     assert result.exit_code == 0
     assert "Project initialized successfully" in result.output
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_build(mock_protos, runner):
     result = runner.invoke(cli, ['build'])
     assert result.exit_code == 0
     assert "Build completed successfully" in result.output
     mock_protos.build.assert_called_once()
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_create_event_with_fields(mock_protos, runner):
     result = runner.invoke(cli, ['create-event', 'MyEvent', '--field', 'age:int32', '--field', 'name:string'])
     assert result.exit_code == 0
     assert "Event MyEvent created" in result.output
     mock_protos.create_event.assert_called_once_with('MyEvent', [('age', 'int32'), ('name', 'string')])
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_create_event_invalid_field(mock_protos, runner):
     result = runner.invoke(cli, ['create-event', 'MyEvent', '--field', 'age_int32'])
     assert result.exit_code == 1
     assert "Invalid field format" in result.output
     mock_protos.create_event.assert_not_called()
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_create_event_interactive(mock_protos, runner):
     # simulate "y" (add field?), "age", "int32", "n" (add another?)
     result = runner.invoke(cli, ['create-event', 'MyEvent'], input="y\nage\nint32\nn\n")
     assert result.exit_code == 0
     mock_protos.create_event.assert_called_once_with('MyEvent', [('age', 'int32')])
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_exceptions_in_commands(mock_protos, runner):
     mock_protos.init.side_effect = Exception("init error")
     result = runner.invoke(cli, ['protos', 'init'])
@@ -76,7 +76,7 @@ def test_exceptions_in_commands(mock_protos, runner):
     result = runner.invoke(cli, ['deprecate-event', 'e'])
     assert result.exit_code == 1
 
-@patch('cli.console.fields')
+@patch('loggerbuf.cli.console.fields')
 def test_exceptions_in_fields(mock_fields, runner):
     mock_fields.add_subfield.side_effect = Exception("add error")
     result = runner.invoke(cli, ['add-subfield', 'M', 'F', 'T'])
@@ -86,7 +86,7 @@ def test_exceptions_in_fields(mock_fields, runner):
     result = runner.invoke(cli, ['deprecate-subfield', 'M', 'F'])
     assert result.exit_code == 1
 
-@patch('cli.console.events')
+@patch('loggerbuf.cli.console.events')
 def test_exceptions_in_events(mock_events, runner):
     mock_events.add_type.side_effect = Exception("add_type error")
     result = runner.invoke(cli, ['event', 'add-type', 'N'])
@@ -100,52 +100,52 @@ def test_exceptions_in_events(mock_events, runner):
     result = runner.invoke(cli, ['event', 'list'])
     assert result.exit_code == 1
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_register_event(mock_protos, runner):
     result = runner.invoke(cli, ['register-event', 'my_evt', 'MyEvt'])
     assert result.exit_code == 0
     assert "registered and compiled successfully" in result.output
     mock_protos.register_event.assert_called_once_with('my_evt', 'MyEvt', None)
 
-@patch('cli.console.protos')
+@patch('loggerbuf.cli.console.protos')
 def test_deprecate_event(mock_protos, runner):
     result = runner.invoke(cli, ['deprecate-event', 'my_evt'])
     assert result.exit_code == 0
     assert "marked as deprecated successfully" in result.output
     mock_protos.deprecate_event.assert_called_once_with('my_evt')
 
-@patch('cli.console.fields')
+@patch('loggerbuf.cli.console.fields')
 def test_add_subfield(mock_fields, runner):
     result = runner.invoke(cli, ['add-subfield', 'Msg', 'fld', 'int32'])
     assert result.exit_code == 0
     mock_fields.add_subfield.assert_called_once_with('Msg', 'fld', 'int32', file_name=None)
 
-@patch('cli.console.fields')
+@patch('loggerbuf.cli.console.fields')
 def test_deprecate_subfield(mock_fields, runner):
     result = runner.invoke(cli, ['deprecate-subfield', 'Msg', 'fld'])
     assert result.exit_code == 0
     mock_fields.deprecate_subfield.assert_called_once_with('Msg', 'fld', file_name=None)
 
-@patch('cli.console.decode_handler.run_decode')
+@patch('loggerbuf.cli.console.decode_handler.run_decode')
 def test_decode_logs(mock_run_decode, runner):
     result = runner.invoke(cli, ['decode', 'file.bin'])
     assert result.exit_code == 0
     mock_run_decode.assert_called_once()
 
-@patch('cli.console.decode_handler.run_decode')
+@patch('loggerbuf.cli.console.decode_handler.run_decode')
 def test_decode_logs_head_tail_conflict(mock_run_decode, runner):
     result = runner.invoke(cli, ['decode', 'file.bin', '--head', '10', '--tail', '10'])
     assert result.exit_code == 1
     assert "Cannot use both --head and --tail simultaneously" in result.output
     mock_run_decode.assert_not_called()
 
-@patch('cli.console.decode')
+@patch('loggerbuf.cli.console.decode')
 def test_decode_debug(mock_decode, runner):
     result = runner.invoke(cli, ['decode-debug', 'file.log'])
     assert result.exit_code == 0
     mock_decode.run_decode_debug.assert_called_once_with('file.log', None, None, None)
 
-@patch('cli.console.stress')
+@patch('loggerbuf.cli.console.stress')
 def test_stress_test(mock_stress, runner):
     result = runner.invoke(cli, ['stress-test', '--threads', '5', '--writes', '500'])
     assert result.exit_code == 0
@@ -155,21 +155,21 @@ def test_stress_test(mock_stress, runner):
     assert call_kwargs['num_threads'] == 5
     assert call_kwargs['total_writes'] == 500
 
-@patch('config.ConfigManager')
+@patch('loggerbuf.config.ConfigManager')
 def test_config_init(mock_cm_class, runner):
     result = runner.invoke(cli, ['config', 'init'])
     assert result.exit_code == 0
     assert "is ready" in result.output
     mock_cm_class.assert_called_once()
 
-@patch('config.ConfigManager')
+@patch('loggerbuf.config.ConfigManager')
 def test_config_init_error(mock_cm_class, runner):
     mock_cm_class.side_effect = Exception("init config error")
     result = runner.invoke(cli, ['config', 'init'])
     assert result.exit_code == 1
     assert "Error: init config error" in result.output
 
-@patch('cli.console.ConfigManager')
+@patch('loggerbuf.cli.console.ConfigManager')
 def test_config_set_get(mock_cm_class, runner):
     mock_cm = MagicMock()
     mock_cm_class.return_value = mock_cm
@@ -216,7 +216,7 @@ def test_config_set_get(mock_cm_class, runner):
     assert "METRICS (COUNTERS) SETTINGS" in result.output
     assert "TELEMETRY" not in result.output
 
-@patch('cli.console.ConfigManager')
+@patch('loggerbuf.cli.console.ConfigManager')
 def test_config_get_not_found(mock_cm_class, runner):
     mock_cm = MagicMock()
     mock_cm_class.return_value = mock_cm
@@ -226,7 +226,7 @@ def test_config_get_not_found(mock_cm_class, runner):
     assert result.exit_code == 0
     assert "not found" in result.output
 
-@patch('cli.console.ConfigManager')
+@patch('loggerbuf.cli.console.ConfigManager')
 def test_config_reset(mock_cm_class, runner):
     mock_cm = MagicMock()
     mock_cm_class.return_value = mock_cm
@@ -242,7 +242,7 @@ def test_config_reset(mock_cm_class, runner):
     assert result.exit_code == 0
     assert "already using default" in result.output
 
-@patch('cli.console.events')
+@patch('loggerbuf.cli.console.events')
 def test_event_commands(mock_events, runner):
     result = runner.invoke(cli, ['event', 'add-type', 'NET', '--statuses', 'ON,OFF', '--reserve', '5'])
     assert result.exit_code == 0

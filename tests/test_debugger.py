@@ -1,10 +1,11 @@
+import sys
 import os
 import json
 import time
 import pytest
 import subprocess
-from debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel
-from config import ConfigManager
+from loggerbuf.debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel
+from loggerbuf.config import ConfigManager
 
 class DummyCaller:
     def execute_log(self, logger):
@@ -50,8 +51,8 @@ def test_debugger_log_levels(tmp_path):
     script = tmp_path / "run_levels.py"
     script.write_text(f"""
 import time
-from config import ConfigManager
-from debugger import DebuggerLog, LoggerSettings, LogDestination
+from loggerbuf.config import ConfigManager
+from loggerbuf.debugger import DebuggerLog, LoggerSettings, LogDestination
 
 config = ConfigManager()
 config.set('LOG_LEVEL', 'DEBUG')
@@ -68,7 +69,7 @@ logger.error("Error msg")
 logger.critical("Crit msg")
 time.sleep(0.5)
 """)
-    subprocess.run(["python3", str(script)], env={"PYTHONPATH": os.getcwd()}, check=True)
+    subprocess.run([sys.executable, str(script)], env={"PYTHONPATH": os.path.join(os.getcwd(), 'src')}, check=True)
     
     debug_files = list((tmp_path / "logs").glob("debug_logs_TEST_LEVELS.log"))
     assert len(debug_files) == 1
@@ -103,7 +104,7 @@ def test_debugger_console_filters(capsys):
 
 def test_debugger_history_cleanup(tmp_path):
     import time
-    from config import ConfigManager, ConfigKey
+    from loggerbuf.config import ConfigManager, ConfigKey
     config = ConfigManager()
     
     test_base_dir = tmp_path / "logs_cleanup"

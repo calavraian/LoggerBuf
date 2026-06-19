@@ -2,8 +2,8 @@ import pytest
 import time
 import os
 import logging
-from debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel, LoggingUtils
-import config as defaults
+from loggerbuf.debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel, LoggingUtils
+from loggerbuf import config as defaults
 
 def test_debugger_lossy_queue(tmp_path):
     # Cover lines 41-46
@@ -88,7 +88,7 @@ def test_debugger_rotation_coverage(tmp_path):
     history_dir = tmp_path / "events" / "history"
     # we don't strictly assert the history existence here because debugger uses different defaults for dir
     # wait, debugger default backup dir is "history", let's check log dir
-    from config import ConfigManager
+    from loggerbuf.config import ConfigManager
     backup_dir = tmp_path / ConfigManager().get('LOGGING_BASE_DIR') / settings.get_backup_dir()
     assert backup_dir.exists()
 
@@ -98,7 +98,7 @@ def test_debugger_log_destination_fallback(tmp_path):
     assert getattr(settings_explicit, "_LoggerSettings__stream") == LogDestination.FILE_HISTORY
 
     # Test Priority 2: JSON config
-    from config import ConfigManager, ConfigKey
+    from loggerbuf.config import ConfigManager, ConfigKey
     config = ConfigManager()
     original_dest = config.get(ConfigKey.LOGGING_DESTINATION)
     

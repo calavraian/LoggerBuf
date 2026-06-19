@@ -3,7 +3,7 @@ import logging
 import unittest
 from unittest.mock import MagicMock
 
-from debugger import JsonFormatter
+from loggerbuf.debugger import JsonFormatter
 
 class TestJsonFormatter(unittest.TestCase):
     def test_json_formatter_output(self):

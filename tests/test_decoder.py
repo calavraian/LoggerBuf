@@ -3,10 +3,10 @@ import json
 import time
 import struct
 import pytest
-from telemetry import TelemetryLog, EventSettings
-import schema_loader
+from loggerbuf.telemetry import TelemetryLog, EventSettings
+from loggerbuf import schema_loader
 main_data_pb2 = schema_loader.get_main_data_pb2()
-from cli.handlers.decode import decode_file
+from loggerbuf.cli.handlers.decode import decode_file
 import subprocess
 import sys
 
@@ -48,13 +48,13 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
     
     # Execute CLI
     cmd = [
-        sys.executable, "-m", "cli.console", "decode",
+        sys.executable, "-m", "loggerbuf.cli.console", "decode",
         sample_telemetry_file,
         "--output", str(output_file),
         "--format", "jsonl"
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, env=dict(os.environ, PYTHONPATH='src'), capture_output=True, text=True)
     assert result.returncode == 0
     assert output_file.exists()
     
@@ -68,12 +68,12 @@ def test_decoder_json_validation(sample_telemetry_file, tmp_path):
 def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     # Head 2
     cmd_head = [
-        sys.executable, "-m", "cli.console", "decode",
+        sys.executable, "-m", "loggerbuf.cli.console", "decode",
         sample_telemetry_file,
         "--head", "2",
         "--format", "jsonl"
     ]
-    result = subprocess.run(cmd_head, capture_output=True, text=True)
+    result = subprocess.run(cmd_head, env=dict(os.environ, PYTHONPATH='src'), capture_output=True, text=True)
     assert result.returncode == 0
     lines = result.stdout.strip().split('\n')
     assert len(lines) == 2
@@ -81,12 +81,12 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
     
     # Tail 2
     cmd_tail = [
-        sys.executable, "-m", "cli.console", "decode",
+        sys.executable, "-m", "loggerbuf.cli.console", "decode",
         sample_telemetry_file,
         "--tail", "2",
         "--format", "jsonl"
     ]
-    result_tail = subprocess.run(cmd_tail, capture_output=True, text=True)
+    result_tail = subprocess.run(cmd_tail, env=dict(os.environ, PYTHONPATH='src'), capture_output=True, text=True)
     assert result_tail.returncode == 0
     lines_tail = result_tail.stdout.strip().split('\n')
     assert len(lines_tail) == 2
@@ -94,10 +94,10 @@ def test_decoder_cli_head_tail(sample_telemetry_file, tmp_path):
 
 def test_decoder_cli_stats(sample_telemetry_file):
     cmd_stats = [
-        sys.executable, "-m", "cli.console", "decode",
+        sys.executable, "-m", "loggerbuf.cli.console", "decode",
         sample_telemetry_file,
         "--stats"
     ]
-    result = subprocess.run(cmd_stats, capture_output=True, text=True)
+    result = subprocess.run(cmd_stats, env=dict(os.environ, PYTHONPATH='src'), capture_output=True, text=True)
     assert result.returncode == 0
     assert "Total events decoded: 5" in result.stdout

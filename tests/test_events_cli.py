@@ -1,8 +1,8 @@
 import os
 import pytest
 from click.testing import CliRunner
-from cli.console import cli
-import data_logs.registry_pb2 as registry_pb2
+from loggerbuf.cli.console import cli
+import loggerbuf.data_logs.registry_pb2 as registry_pb2
 
 def test_events_cli_add_type(tmp_path, monkeypatch):
     runner = CliRunner()
@@ -12,19 +12,19 @@ def test_events_cli_add_type(tmp_path, monkeypatch):
     # To test safely, we will copy the real proto to a temp dir and monkeypatch get_protos_dir.
     import shutil
     import os
-    from cli.handlers import events
+    from loggerbuf.cli.handlers import events
     real_proto_dir = "loggerbuf_schemas"
     if not os.path.exists(real_proto_dir):
         # Fallback to internal if not initialized
-        real_proto_dir = "data_logs/protos"
+        real_proto_dir = "src/loggerbuf/data_logs/protos"
         
     test_proto_dir = tmp_path / "protos"
     test_proto_dir.mkdir()
     shutil.copy(f"{real_proto_dir}/registry.proto", test_proto_dir)
     
-    monkeypatch.setattr("cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.events.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.events.get_protos_dir", lambda: str(test_proto_dir))
     
     # Add a type without statuses
     result = runner.invoke(cli, ['event', 'add-type', 'NETWORK', '--reserve', '5'])
@@ -55,14 +55,14 @@ def test_events_cli_add_status(tmp_path, monkeypatch):
     
     real_proto_dir = "loggerbuf_schemas"
     if not os.path.exists(real_proto_dir):
-        real_proto_dir = "data_logs/protos"
+        real_proto_dir = "src/loggerbuf/data_logs/protos"
     test_proto_dir = tmp_path / "protos"
     test_proto_dir.mkdir()
     shutil.copy(os.path.join(real_proto_dir, "registry.proto"), test_proto_dir / "registry.proto")
     
-    monkeypatch.setattr("cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
     
     # Add status to an existing block created by add_type
     runner.invoke(cli, ['event', 'add-type', 'CACHE', '--statuses', 'HIT'])
@@ -83,14 +83,14 @@ def test_events_cli_list(tmp_path, monkeypatch):
     
     real_proto_dir = "loggerbuf_schemas"
     if not os.path.exists(real_proto_dir):
-        real_proto_dir = "data_logs/protos"
+        real_proto_dir = "src/loggerbuf/data_logs/protos"
     test_proto_dir = tmp_path / "protos"
     test_proto_dir.mkdir()
     shutil.copy(os.path.join(real_proto_dir, "registry.proto"), test_proto_dir / "registry.proto")
     
-    monkeypatch.setattr("cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
-    monkeypatch.setattr("cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
     
     result = runner.invoke(cli, ['event', 'list'])
     assert result.exit_code == 0

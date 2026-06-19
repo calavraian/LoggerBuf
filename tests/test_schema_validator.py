@@ -1,15 +1,15 @@
 import pytest
 from unittest.mock import patch, MagicMock
-from cli.utils.schema_validator import validate_and_snapshot, SchemaValidationError
+from loggerbuf.cli.utils.schema_validator import validate_and_snapshot, SchemaValidationError
 
-@patch('cli.utils.schema_validator.os.listdir')
+@patch('loggerbuf.cli.utils.schema_validator.os.listdir')
 def test_validate_no_files(mock_listdir):
     mock_listdir.return_value = []
     # Should just return without error
     validate_and_snapshot("dummy_dir")
 
-@patch('cli.utils.schema_validator.os.listdir')
-@patch('cli.utils.schema_validator.subprocess.run')
+@patch('loggerbuf.cli.utils.schema_validator.os.listdir')
+@patch('loggerbuf.cli.utils.schema_validator.subprocess.run')
 def test_validate_protoc_error(mock_subprocess_run, mock_listdir):
     import subprocess
     mock_listdir.return_value = ['test.proto']
@@ -17,12 +17,12 @@ def test_validate_protoc_error(mock_subprocess_run, mock_listdir):
     with pytest.raises(SchemaValidationError, match="Protoc compilation failed"):
         validate_and_snapshot("dummy_dir")
 
-@patch('cli.utils.schema_validator.os.listdir')
-@patch('cli.utils.schema_validator.subprocess.run')
-@patch('cli.utils.schema_validator._extract_schema_from_descriptor')
-@patch('cli.utils.schema_validator._load_snapshot')
-@patch('cli.utils.schema_validator.os.remove')
-@patch('cli.utils.schema_validator.os.path.exists')
+@patch('loggerbuf.cli.utils.schema_validator.os.listdir')
+@patch('loggerbuf.cli.utils.schema_validator.subprocess.run')
+@patch('loggerbuf.cli.utils.schema_validator._extract_schema_from_descriptor')
+@patch('loggerbuf.cli.utils.schema_validator._load_snapshot')
+@patch('loggerbuf.cli.utils.schema_validator.os.remove')
+@patch('loggerbuf.cli.utils.schema_validator.os.path.exists')
 def test_schema_validation_errors(mock_exists, mock_remove, mock_load, mock_extract, mock_run, mock_listdir):
     mock_listdir.return_value = ['test.proto']
     mock_exists.return_value = True

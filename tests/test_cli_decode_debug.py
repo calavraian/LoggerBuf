@@ -6,7 +6,7 @@ import gzip
 from io import StringIO
 import sys
 
-from cli.handlers.decode import decode_debug_file, run_decode_debug
+from loggerbuf.cli.handlers.decode import decode_debug_file, run_decode_debug
 
 class TestDecodeDebug(unittest.TestCase):
     def setUp(self):
