@@ -237,7 +237,7 @@ def decode(input_file, output, format, stats, head, tail, verify, skip_integrity
 @click.option('--tail', type=int, help="Show only the last N logs.")
 def decode_debug(input_file, grep, head, tail):
     """Explores historical JSON debug logs visually in the terminal."""
-    decode.run_decode_debug(input_file, grep, head, tail)
+    decode_handler.run_decode_debug(input_file, grep, head, tail)
 
 @cli.group()
 def event():
