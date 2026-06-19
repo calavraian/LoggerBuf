@@ -5,6 +5,16 @@ from .config import ConfigManager
 
 def _load_module(module_name, protos_dir):
     """Dynamically loads a module from the given directory."""
+    # 1. Attempt native package import first to prevent duplicate descriptor pool registrations
+    package_name = os.path.basename(os.path.normpath(protos_dir))
+    if package_name:
+        try:
+            import importlib
+            return importlib.import_module(f"{package_name}.{module_name}")
+        except Exception:
+            pass
+
+    # 2. Fallback: Dynamically load if not on sys.path
     file_path = os.path.join(protos_dir, f"{module_name}.py")
     if not os.path.exists(file_path):
         return None
@@ -14,9 +24,7 @@ def _load_module(module_name, protos_dir):
         return None
         
     module = importlib.util.module_from_spec(spec)
-    # Important: add to sys.modules so standard python imports in generated code work
     sys.modules[module_name] = module
-    # Also keep the data_logs alias for backwards compatibility if needed
     sys.modules[f"data_logs.{module_name}"] = module
     try:
         spec.loader.exec_module(module)

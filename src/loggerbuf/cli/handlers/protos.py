@@ -214,14 +214,15 @@ def _fix_python_imports(protos_dir):
         with open(filename, 'w') as file:
             file.write(warning_header)
             for line in lines:
-                if re.search(import_string, line):
-                    # We remove 'from .' if they are all in the same flat folder now, 
-                    # but wait, protoc in the same folder generates standard absolute imports 'import registry_pb2'
-                    # which works perfectly when we inject it via schema_loader.py!
-                    # Wait, no, we need to make sure the imports work correctly. Let's just leave them as they are or keep the fix if they fail.
-                    # Since we add them to sys.modules via schema_loader, `import registry_pb2` works directly.
-                    # Let's remove the `from .` injection.
-                    file.write(line)
+                match = re.search(r"^import\s+(\w+_pb2)", line)
+                if match:
+                    original_line = line.strip()
+                    relative_line = original_line.replace("import ", "from . import ", 1)
+                    
+                    file.write("try:\n")
+                    file.write(f"    {relative_line}\n")
+                    file.write("except ImportError:\n")
+                    file.write(f"    {original_line}\n")
                 else:
                     file.write(line)
 
