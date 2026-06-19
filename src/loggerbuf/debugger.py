@@ -421,6 +421,30 @@ class DebuggerLog:
                 console_filter.allowed_levels = allowed_levels
                 console_filter.is_enabled = True
 
+    def stop_rotation_timer(self):
+        """
+        Stops the hourly timer for rotation (if applicable).
+        """
+        name = self.__settings.get_name()
+        if name in DebuggerLog.__loggers:
+            if hasattr(self, '_DebuggerLog__rotation_timer') and self.__rotation_timer:
+                self.__rotation_timer.cancel()
+                
+    def shutdown(self):
+        """
+        Gracefully stops the queue listener and closes handlers.
+        """
+        name = self.__settings.get_name()
+        if name in DebuggerLog.__listeners:
+            listener = DebuggerLog.__listeners[name]
+            listener.stop()
+            del DebuggerLog.__listeners[name]
+        
+        self.stop_rotation_timer()
+        
+        if name in DebuggerLog.__loggers:
+            del DebuggerLog.__loggers[name]
+
     def disable_console(self):
         """
         Dynamically disables the console output.
