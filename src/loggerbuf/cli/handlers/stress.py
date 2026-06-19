@@ -91,14 +91,16 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
         original_strategy = config._config.get('LOGGING_QUEUE_STRATEGY')
         original_event_queue = config._config.get('EVENT_QUEUE_MAX_SIZE')
         original_event_strategy = config._config.get('EVENT_QUEUE_STRATEGY')
+        original_console_enabled = config._config.get('LOGGING_CONSOLE_ENABLED')
         
         config._config['LOGGING_QUEUE_MAX_SIZE'] = queue_size
         config._config['LOGGING_QUEUE_STRATEGY'] = strategy
         config._config['EVENT_QUEUE_MAX_SIZE'] = queue_size
         config._config['EVENT_QUEUE_STRATEGY'] = strategy
+        config._config['LOGGING_CONSOLE_ENABLED'] = False
         
     try:
-        loggerSettings = LoggerSettings(name='STRESS_TEST', stream=LogDestination.CONSOLE_AND_FILE_LIVE, logs_base_dir=stress_log_dir)
+        loggerSettings = LoggerSettings(name='STRESS_TEST', stream=LogDestination.FILE_LIVE, logs_base_dir=stress_log_dir)
         logger = DebuggerLog(loggerSettings)
         logger.setLoggerToDebug()
 
@@ -108,19 +110,7 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
         writes_per_thread = total_writes // num_threads if num_threads > 0 else 0
         delay_per_write = (duration / writes_per_thread) if writes_per_thread > 0 and duration > 0 else 0
 
-        logger.info(f"\n=== Starting Concurrency Stress Test ===")
-        logger.info(f"Target: {total_writes} total logs across {num_threads} threads ({writes_per_thread} per thread).")
-        logger.info(f"Queue Size: {queue_size} | Strategy: {strategy}")
-        if delay_per_write >= 0.001:
-            logger.info(f"Pacing: Duration {duration}s -> ~{delay_per_write:.4f}s delay per write.")
-        else:
-            logger.info("Pacing: Burst mode (no artificial delay).")
-
-        monitor = ResourceMonitor()
-        monitor.start()
-
-        start_time = time.time()
-
+        # Create worker task
         def worker_task(thread_id):
             for i in range(writes_per_thread):
                 logger.debug(f"Thread-{thread_id} operational log #{i}")
@@ -139,25 +129,79 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
             thread = threading.Thread(target=worker_task, args=(t,))
             threads.append(thread)
 
+        monitor = ResourceMonitor()
+        monitor.start()
+
+        print("\n=== Starting Concurrency Stress Test ===")
+        print(f"Target: {total_writes} total logs across {num_threads} threads ({writes_per_thread} per thread).")
+        print(f"Queue Size: {queue_size} | Strategy: {strategy}")
+        if delay_per_write >= 0.001:
+            print(f"Pacing: Duration {duration}s -> ~{delay_per_write:.4f}s delay per write.")
+        else:
+            print("Pacing: Burst mode (no artificial delay).")
+        print("="*40)
+
+        start_time = time.time()
+        
+        # Start all workers
         for thread in threads:
             thread.start()
 
+        # Start Dashboard Loop
+        dashboard_stop_event = threading.Event()
+        def dashboard_task():
+            lines_printed = 0
+            while not dashboard_stop_event.is_set():
+                metrics = eventLogger.get_metrics()
+                # Clear previous lines
+                if lines_printed > 0:
+                    sys.stdout.write(f"\033[{lines_printed}A\033[J")
+                    
+                active = sum(1 for t in threads if t.is_alive())
+                elapsed = time.time() - start_time
+                
+                output = []
+                output.append(f"🚀 LIVE STRESS TEST DASHBOARD 🚀")
+                output.append(f"⏱️  Time Elapsed:   {elapsed:.1f} s")
+                output.append(f"🧵 Threads Active: {active} / {num_threads}")
+                output.append(f"📊 Events Queued:  {metrics['total_queued']} / {total_writes}")
+                output.append(f"💾 Events Written: {metrics['total_processed']}")
+                output.append(f"📈 Peak Queue:     {metrics['peak_size']}")
+                output.append(f"💧 Events Dropped: {metrics['total_drops']}")
+                if monitor.enabled:
+                    output.append(f"💻 CPU: {monitor.peak_cpu:.1f}% | RAM: {monitor.peak_ram_mb:.1f} MB")
+                else:
+                    output.append(f"💻 CPU/RAM: [psutil not installed]")
+                
+                text = "\n".join(output)
+                sys.stdout.write(text + "\n")
+                sys.stdout.flush()
+                lines_printed = len(output) + 1
+                
+                time.sleep(0.15)
+                
+        dashboard_thread = threading.Thread(target=dashboard_task, daemon=True)
+        dashboard_thread.start()
+
+        # Wait for workers to finish
         for thread in threads:
             thread.join()
 
-        elapsed_time = time.time() - start_time
-        
-        # Give writer threads a moment to catch up if we are measuring drain time
+        # Give writer threads a moment to catch up
         time.sleep(1.0)
         
+        # Stop monitoring and dashboard
+        dashboard_stop_event.set()
+        dashboard_thread.join()
         monitor.stop()
         monitor.join(timeout=1.0)
         
+        elapsed_time = time.time() - start_time
         final_disk_bytes = get_dir_size(stress_log_dir)
         disk_used_mb = (final_disk_bytes - initial_disk_bytes) / (1024 * 1024)
 
-        logger.info("=== Stress Test Completed ===")
-        logger.info(f"Client submission time: {elapsed_time:.4f} seconds.")
+        print("\n=== Stress Test Completed ===")
+        print(f"Client submission time: {elapsed_time:.4f} seconds.")
         
         metrics = eventLogger.get_metrics()
         print("\n" + "="*60)
@@ -208,6 +252,11 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
                 config._config['EVENT_QUEUE_STRATEGY'] = original_event_strategy
             else:
                 config._config.pop('EVENT_QUEUE_STRATEGY', None)
+                
+            if original_console_enabled is not None:
+                config._config['LOGGING_CONSOLE_ENABLED'] = original_console_enabled
+            else:
+                config._config.pop('LOGGING_CONSOLE_ENABLED', None)
                 
         # Gracefully shut down loggers to flush remaining queue items and stop threads
         print("Shutting down loggers gracefully...")
