@@ -7,12 +7,18 @@ from typing import Optional
 
 def get_dir_size(path='.'):
     total = 0
-    with os.scandir(path) as it:
-        for entry in it:
-            if entry.is_file():
-                total += entry.stat().st_size
-            elif entry.is_dir():
-                total += get_dir_size(entry.path)
+    try:
+        with os.scandir(path) as it:
+            for entry in it:
+                try:
+                    if entry.is_file():
+                        total += entry.stat().st_size
+                    elif entry.is_dir():
+                        total += get_dir_size(entry.path)
+                except FileNotFoundError:
+                    pass
+    except FileNotFoundError:
+        pass
     return total
 
 class ResourceMonitor(threading.Thread):
@@ -58,8 +64,8 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
         Event = main_data_pb2.Event
         EventType = registry_pb2.EventType
         EventStatus = registry_pb2.EventStatus
-        from debugger import DebuggerLog, StreamLevel, LoggerSettings
-        from telemetry import TelemetryLog, EventSettings
+        from ...debugger import DebuggerLog, LogDestination, LoggerSettings
+        from ...telemetry import TelemetryLog, EventSettings
         from ...config import ConfigManager
     except ImportError as e:
         print(f"Error importing LoggerBuf modules: {e}")
@@ -92,8 +98,7 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
         config._config['EVENT_QUEUE_STRATEGY'] = strategy
         
     try:
-        loggerSettings = LoggerSettings(name='STRESS_TEST', stream=StreamLevel.FILE_CONSOLE)
-        loggerSettings.set_path(stress_log_dir)
+        loggerSettings = LoggerSettings(name='STRESS_TEST', stream=LogDestination.CONSOLE_AND_FILE_LIVE, logs_base_dir=stress_log_dir)
         logger = DebuggerLog(loggerSettings)
         logger.setLoggerToDebug()
 
