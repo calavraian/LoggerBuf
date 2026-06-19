@@ -380,11 +380,13 @@ def get(key):
                     val = config_manager.get(k)
                     
                     # If this key has limited choices, display them as hints
-                    hints = ""
                     if k in CONFIG_CHOICES:
                         hints = f" [{' | '.join(map(str, CONFIG_CHOICES[k]))}]"
-                        
-                    click.secho(f"{k}{hints}: ", fg="cyan", nl=False)
+                        click.secho(f"{k}", fg="cyan", nl=False)
+                        click.secho(hints, fg="bright_black", nl=False)
+                        click.secho(": ", fg="cyan", nl=False)
+                    else:
+                        click.secho(f"{k}: ", fg="cyan", nl=False)
                     click.echo(f"{val}")
                     
         if group in ('all', 'logging'):
@@ -402,10 +404,13 @@ def get(key):
 
     value = config_manager.get(key)
     if value is not None:
-        hints = ""
         if key in CONFIG_CHOICES:
             hints = f" [{' | '.join(map(str, CONFIG_CHOICES[key]))}]"
-        click.secho(f"{key}{hints}: ", fg="cyan", nl=False)
+            click.secho(f"{key}", fg="cyan", nl=False)
+            click.secho(hints, fg="bright_black", nl=False)
+            click.secho(": ", fg="cyan", nl=False)
+        else:
+            click.secho(f"{key}: ", fg="cyan", nl=False)
         click.echo(f"{value}")
     else:
         click.secho(f"Key '{key}' not found in config or defaults.", fg="red")
