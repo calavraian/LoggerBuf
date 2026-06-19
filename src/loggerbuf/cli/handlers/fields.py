@@ -2,7 +2,7 @@ import os
 import glob
 import re
 import sys
-from cli.handlers.protos import build, get_protos_dir
+from loggerbuf.cli.handlers.protos import build, get_protos_dir
 
 def _find_file_for_message(message_name: str, file_name: str = None) -> str:
     protos_dir = get_protos_dir()

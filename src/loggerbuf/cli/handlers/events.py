@@ -2,7 +2,7 @@ import os
 import re
 import click
 from typing import List
-from cli.handlers.protos import get_protos_dir
+from loggerbuf.cli.handlers.protos import get_protos_dir
 
 def _get_registry_proto() -> str:
     return os.path.join(get_protos_dir(), "registry.proto")

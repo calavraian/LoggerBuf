@@ -6,7 +6,7 @@ import re
 from google.protobuf.json_format import MessageToDict
 
 try:
-    import schema_loader
+    from ... import schema_loader
     main_data_pb2 = schema_loader.get_main_data_pb2()
     Event = main_data_pb2.Event
     CounterEvent = main_data_pb2.CounterEvent

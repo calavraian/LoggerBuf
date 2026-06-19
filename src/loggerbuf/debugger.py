@@ -7,7 +7,7 @@ import queue
 import sys
 import threading
 import time
-from config import ConfigManager, CONFIG_FILE, QueueStrategy, ConfigKey, LogMetadata
+from .config import ConfigManager, CONFIG_FILE, QueueStrategy, ConfigKey, LogMetadata
 
 from enum import Enum
 from logging.handlers import RotatingFileHandler, QueueHandler, QueueListener
@@ -31,7 +31,7 @@ class RolloverType(Enum):
     TIME = 1
     SIZE = 2
 
-from config import QueueStrategy
+from .config import QueueStrategy
 
 class LoggerBufQueueHandler(QueueHandler):
     def __init__(self, queue_obj, strategy: QueueStrategy = QueueStrategy.LOSSY):

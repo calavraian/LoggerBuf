@@ -1,7 +1,7 @@
 import os
 import sys
 import importlib.util
-from config import ConfigManager
+from .config import ConfigManager
 
 def _load_module(module_name, protos_dir):
     """Dynamically loads a module from the given directory."""
@@ -31,7 +31,7 @@ def get_registry_pb2():
     mod = _load_module("registry_pb2", protos_dir)
     if mod is None:
         # Fallback to default internal for testing or pre-init
-        from data_logs import registry_pb2 as internal_mod
+        from .data_logs import registry_pb2 as internal_mod
         return internal_mod
     return mod
 
@@ -41,7 +41,7 @@ def get_main_data_pb2():
     mod = _load_module("main_data_pb2", protos_dir)
     if mod is None:
         # Fallback to default internal
-        from data_logs import main_data_pb2 as internal_mod
+        from .data_logs import main_data_pb2 as internal_mod
         return internal_mod
     return mod
 

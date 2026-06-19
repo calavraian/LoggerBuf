@@ -2,10 +2,10 @@ import os
 import re
 import subprocess
 import glob
-from cli.utils import registry
-from cli.utils import schema_validator
+from loggerbuf.cli.utils import registry
+from loggerbuf.cli.utils import schema_validator
 
-from config import ConfigManager
+from ...config import ConfigManager
 import shutil
 
 def get_protos_dir():

@@ -2,7 +2,7 @@ import json
 import hashlib
 import os
 
-from config import ConfigManager
+from ...config import ConfigManager
 
 def get_registry_file():
     return os.path.join(ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas"), ".loggerbuf_registry.json")

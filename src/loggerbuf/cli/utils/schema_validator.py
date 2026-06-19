@@ -3,7 +3,7 @@ import json
 import subprocess
 from google.protobuf import descriptor_pb2
 
-from config import ConfigManager
+from ...config import ConfigManager
 
 def get_snapshot_file():
     return os.path.join(ConfigManager().get("PROTOS_DIR", "loggerbuf_schemas"), ".loggerbuf_schema_snapshot.json")
