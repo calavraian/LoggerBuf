@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "loggerbuf"
+version = "0.9.0"
+description = "A powerful structured telemetry and debugging logger with Protobuf schemas"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    { name = "LoggerBuf Team", email = "hello@loggerbuf.dev" }
+]
+urls = { Repository = "https://github.com/calavraian/LoggerBuf" }
+dependencies = [
+    "protobuf>=5.29.3",
+    "click>=8.0.0",
+    "psutil"
+]
+
+[project.scripts]
+loggerbuf = "loggerbuf.cli.console:cli"
+
+[tool.setuptools]
+packages = ["loggerbuf", "loggerbuf.cli", "loggerbuf.cli.handlers", "loggerbuf.cli.utils", "loggerbuf.data_logs"]
+package-dir = {"" = "src"}
+include-package-data = true
