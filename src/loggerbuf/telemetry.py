@@ -379,3 +379,13 @@ class TelemetryLog:
     def get_metrics(self, keys: list = None, output_format: str = "dict", verbose: bool = False):
         qsize = self.__event_writer.queue.qsize()
         return self.__event_writer.metrics.get_report(current_qsize=qsize, keys=keys, output_format=output_format, verbose=verbose)
+
+    def shutdown(self):
+        """
+        Gracefully stops the telemetry writer and flushes remaining queue items.
+        """
+        with TelemetryLog.__lock:
+            name = self.__settings.get_name()
+            if name in TelemetryLog.__instances:
+                self.__event_writer.stop()
+                del TelemetryLog.__instances[name]

@@ -208,6 +208,11 @@ def run_stress_test(num_threads: int, total_writes: int, duration: int, queue_si
                 config._config['EVENT_QUEUE_STRATEGY'] = original_event_strategy
             else:
                 config._config.pop('EVENT_QUEUE_STRATEGY', None)
+                
+        # Gracefully shut down loggers to flush remaining queue items and stop threads
+        print("Shutting down loggers gracefully...")
+        eventLogger.shutdown()
+        logger.shutdown()
 
     # 6. Cleanup
     if not keep_logs:
