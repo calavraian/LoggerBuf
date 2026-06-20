@@ -139,11 +139,11 @@ def test_decode_logs_head_tail_conflict(mock_run_decode, runner):
     assert "Cannot use both --head and --tail simultaneously" in result.output
     mock_run_decode.assert_not_called()
 
-@patch('loggerbuf.cli.console.decode')
-def test_decode_debug(mock_decode, runner):
+@patch('loggerbuf.cli.console.decode_handler.run_decode_debug')
+def test_decode_debug(mock_run_decode_debug, runner):
     result = runner.invoke(cli, ['decode-debug', 'file.log'])
     assert result.exit_code == 0
-    mock_decode.run_decode_debug.assert_called_once_with('file.log', None, None, None)
+    mock_run_decode_debug.assert_called_once_with('file.log', None, None, None)
 
 @patch('loggerbuf.cli.console.stress')
 def test_stress_test(mock_stress, runner):
