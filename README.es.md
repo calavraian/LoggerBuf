@@ -2,11 +2,10 @@
 
 <div align="center">
 
-[![PyPI version](https://badge.fury.io/py/loggerbuf.svg)](https://badge.fury.io/py/loggerbuf)
+[![PyPI version](https://img.shields.io/pypi/v/loggerbuf.svg)](https://pypi.org/project/loggerbuf/)
 [![Python Versions](https://img.shields.io/pypi/pyversions/loggerbuf.svg)](https://pypi.org/project/loggerbuf/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://github.com/calavraian/LoggerBuf/actions/workflows/python-app.yml/badge.svg)](https://github.com/calavraian/LoggerBuf/actions)
-[![Coverage Status](https://coveralls.io/repos/github/calavraian/LoggerBuf/badge.svg?branch=main)](https://coveralls.io/github/calavraian/LoggerBuf?branch=main)
+[![Build Status](https://github.com/calavraian/LoggerBuf/actions/workflows/ci.yml/badge.svg)](https://github.com/calavraian/LoggerBuf/actions)
 
 </div>
 
