@@ -15,8 +15,9 @@ LoggerBuf separates logs into two independent streams:
 ## CLI Usage (Schema Management)
 **CRITICAL:** NEVER edit the `.proto` files manually. ALWAYS use the `loggerbuf` CLI within the virtual environment.
 
-Before running any CLI command, ensure you are in the virtual environment:
+Before running any CLI command, ensure you are operating in the correct Python environment. If the project uses a virtual environment (like `venv/` or `.venv/`), activate it first:
 ```bash
+# Example for standard venv (adapt if using Poetry, Conda, or global/container envs)
 source venv/bin/activate
 ```
 
@@ -88,7 +89,7 @@ def log_user_signup(user_id: str, timestamp: int):
 If the user asks you to implement an event but hasn't provided all the data fields needed for the schema, **STOP and ask the user** what data types and fields are required for the business logic. Don't guess their analytics fields.
 
 ## Summary Checklist for Agents
-1. Did I activate `venv`?
+1. Did I check/activate the correct Python environment (e.g., `venv`) if applicable?
 2. Did I run `loggerbuf init` if this is a new project?
 3. Did I use the CLI to alter the schema?
 4. Did I run `loggerbuf build` after changing the schema?
