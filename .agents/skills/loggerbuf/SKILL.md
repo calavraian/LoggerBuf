@@ -51,16 +51,19 @@ LoggerBuf exposes factories for initialization:
 
 ```python
 from loggerbuf import create_telemetry, create_debugger
+from loggerbuf import LogDestination
 
 # Zero-config (recommended for quickstarts)
 telemetry = create_telemetry()
 debugger = create_debugger()
 
 # Advanced config (custom paths)
-from loggerbuf import LogDestination
 telemetry = create_telemetry(name="MAIN", logs_base_dir="/custom/telemetry")
 debugger = create_debugger(name="MAIN", logs_base_dir="/custom/debug", stream=LogDestination.CONSOLE_AND_FILE_HISTORY)
 ```
+
+**Note on Configuration (`loggerbuf.json`):**
+If you need to adjust global behaviors (like turning off console colors, changing log rotation thresholds, max file sizes, or default paths), DO NOT try to pass them all via code. Instead, modify the `loggerbuf.json` file that is created in the project root after running `loggerbuf init`. This file contains all the available parameters to tweak the library's behavior.
 
 ### 2. Helper Modules (DRY Pattern)
 Instead of manually crafting events in every file, you MUST create a central `telemetry_utils.py` file to handle event initialization and avoid repetitive code.
