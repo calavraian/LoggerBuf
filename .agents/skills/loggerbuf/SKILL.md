@@ -70,6 +70,7 @@ Instead of manually crafting events in every file, you MUST create a central `te
 from loggerbuf import create_telemetry
 from loggerbuf_schemas.main_data_pb2 import Event
 from loggerbuf_schemas.usersignup_event_pb2 import UserSignup
+from loggerbuf_schemas.registry_pb2 import CounterType
 
 telemetry = create_telemetry()
 
@@ -83,6 +84,10 @@ def log_user_signup(user_id: str, timestamp: int):
     
     # Send to the telemetry queue
     telemetry.create_event(main_data)
+
+def increment_page_views():
+    # Use counters for high-frequency metrics
+    telemetry.increment(CounterType.COUNTER_GENERIC, 1)
 ```
 
 ### 3. Missing Information
