@@ -41,6 +41,15 @@ Este comando realiza la inicialización paso a paso automáticamente:
 
 ---
 
+## 🤖 Integración con Agentes IA (Agent Skill)
+
+¡LoggerBuf es increíblemente fácil de usar para asistentes de programación por IA (como Gemini, Claude o Cursor)!
+Proveemos un **Agent Skill** dedicado (`SKILL.md`) ubicado en `.agents/skills/loggerbuf/SKILL.md` dentro de este repositorio.
+
+Si estás usando un sistema de IA que soporte skills personalizados, simplemente apúntalo hacia nuestro archivo `SKILL.md`. Tu agente entenderá al instante el flujo de trabajo del CLI, las reglas de manejo de esquemas, directrices de diseño de eventos y los patrones de implementación *DRY* en Python requeridos para integrar LoggerBuf fluidamente en tu proyecto.
+
+---
+
 ## 🤔 ¿Por qué LoggerBuf? (El Problema y la Solución)
 
 **El Problema:** 

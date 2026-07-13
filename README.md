@@ -43,6 +43,15 @@ You are now ready to log! You can also run these sub-commands individually if yo
 
 ---
 
+## 🤖 AI Agent Integration (Agent Skill)
+
+LoggerBuf is incredibly easy for AI coding assistants (like Gemini, Claude, or Cursor) to use!
+We provide a dedicated **Agent Skill** (`SKILL.md`) located in `.agents/skills/loggerbuf/SKILL.md` within this repository. 
+
+If you are using an agentic AI system that supports custom skills, simply point it to our `SKILL.md`. Your agent will instantly understand the CLI workflow, Schema Management rules, Event formatting guidelines, and DRY Python implementation patterns required to integrate LoggerBuf seamlessly into your project.
+
+---
+
 ## 🤔 Why LoggerBuf? (The Problem & The Solution)
 
 **The Problem:** 
