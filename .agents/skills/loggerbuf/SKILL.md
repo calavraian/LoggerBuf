@@ -8,9 +8,18 @@ description: How to configure and use LoggerBuf for structured telemetry and deb
 You are integrating or managing `LoggerBuf` in a Python project. `LoggerBuf` is a high-performance structured telemetry and debugging library that uses Protocol Buffers (protobuf) under the hood.
 
 ## Core Philosophy
-LoggerBuf separates logs into two independent streams:
-1. **Telemetry (Binary/Protobuf):** Used for structured business events, analytics, and metrics. These logs are saved in binary format and use strict schemas defined in `main_data.proto`.
-2. **Debugger (Text):** Used for standard console output and text logs (INFO, DEBUG, ERROR) meant for humans.
+LoggerBuf separates logs into independent streams:
+1. **Telemetry Events (Binary/Protobuf):** Used for structured business events and analytics. These are highly detailed and saved in binary format using strict schemas.
+2. **Telemetry Counters:** A subset of telemetry used for high-frequency, low-cardinality metrics (e.g., counting page views, errors) where full event payloads are too heavy.
+3. **Debugger (Text):** Used for standard console output and text logs (INFO, DEBUG, ERROR) meant for humans.
+
+### Event Design Guidelines
+When creating a new event schema, encourage robust metadata collection. A good telemetry event should capture context, not just the action. Always consider adding fields for:
+* **Identity:** `user_id`, `session_id`, `device_id`
+* **Context:** `ip_address`, `user_agent`, `app_version`
+* **State:** `status` (enum), `duration_ms` (int64), `error_code` (string)
+* **Temporal:** `timestamp` (int64) 
+(Note: Only add fields that make sense for the specific business logic, but err on the side of comprehensive analytics).
 
 ## CLI Usage (Schema Management)
 **CRITICAL:** NEVER edit the `.proto` files manually. ALWAYS use the `loggerbuf` CLI within the virtual environment.
