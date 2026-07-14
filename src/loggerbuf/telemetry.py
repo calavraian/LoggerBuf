@@ -8,10 +8,39 @@ from .config import ConfigManager, QueueStrategy, ConfigKey
 
 from . import schema_loader
 main_data_pb2 = schema_loader.get_main_data_pb2()
+registry_pb2 = schema_loader.get_registry_pb2()
 Event = main_data_pb2.Event
 CounterEvent = main_data_pb2.CounterEvent
 
 from .queue_metrics import QueueMetrics, MetricField
+
+class EventContext:
+    def __init__(self, telemetry_instance, event_type, base_kwargs):
+        self.telemetry = telemetry_instance
+        self.event_type = event_type
+        self.kwargs = base_kwargs
+        self.start_time = None
+
+    def attach(self, **new_kwargs):
+        """Attaches additional data to the event context."""
+        self.kwargs.update(new_kwargs)
+
+    def __enter__(self):
+        self.start_time = time.time()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        duration_ms = int((time.time() - self.start_time) * 1000)
+        self.kwargs["duration_ms"] = duration_ms
+
+        if exc_type is not None:
+            status = registry_pb2.EventStatus.STATUS_FAILED
+            self.kwargs["general_note"] = f"[{exc_type.__name__}] {str(exc_value)} | {self.kwargs.get('general_note', '')}"
+        else:
+            status = registry_pb2.EventStatus.STATUS_COMPLETED
+
+        self.telemetry.log_event(event_type=self.event_type, status=status, stack_depth=3, **self.kwargs)
+        return False
 
 class BaseSettings:
     def __init__(self, prefix: str, name: str = None, logs_base_dir: str = ".", backup_dir: str = None, file_size: int = None, backup_count: int = None):
@@ -310,17 +339,67 @@ class TelemetryLog:
                 self.__event_writer = TelemetryLog.__instances[name][1]
                 self.__metric_writer = TelemetryLog.__instances[name][2]
 
-    def create_event(self, event: Event):
+    def event_context(self, event_type=None, **kwargs):
+        """Returns a context manager for tracking an event's duration and status."""
+        if event_type is None:
+            event_type = registry_pb2.EventType.EVENT_GENERIC
+        return EventContext(self, event_type, kwargs)
+
+    def log_event(self, event_type=None, status=None, stack_depth=2, **kwargs):
+        """Convenience method to log an event directly with kwargs."""
+        if event_type is None:
+            event_type = registry_pb2.EventType.EVENT_GENERIC
+        if status is None:
+            status = registry_pb2.EventStatus.STATUS_COMPLETED
+            
+        main_event = Event()
+        main_event.event_type = event_type
+        main_event.status = status
+        
+        # Protected fields that the system handles
+        protected_fields = {"logger_name", "timestamp", "caller_file", "caller_class", "caller_function", "lineno"}
+        
+        for key, value in kwargs.items():
+            if key in protected_fields:
+                continue
+                
+            if hasattr(main_event, key):
+                field = getattr(main_event, key)
+                if hasattr(field, 'CopyFrom'):
+                    try:
+                        field.CopyFrom(value)
+                    except Exception as e:
+                        # Fallback for some types or error
+                        pass
+                else:
+                    try:
+                        setattr(main_event, key, value)
+                    except Exception:
+                        pass
+            else:
+                # Issue warning via debugger if enabled, or just pass
+                pass
+                
+        self.create_event(main_event, stack_depth=stack_depth)
+
+    def create_event(self, event: Event, stack_depth: int = 1):
         import sys
         try:
-            frame = sys._getframe(1)
-            event.caller_file = os.path.basename(frame.f_code.co_filename)
-            event.caller_function = frame.f_code.co_name
-            event.lineno = frame.f_lineno
-            if 'self' in frame.f_locals:
-                event.caller_class = frame.f_locals['self'].__class__.__name__
+            # Walk up the stack to find the actual caller outside telemetry.py
+            frame = sys._getframe(stack_depth)
+            while frame and os.path.basename(frame.f_code.co_filename) == "telemetry.py":
+                frame = frame.f_back
+            
+            if frame:
+                event.caller_file = os.path.basename(frame.f_code.co_filename)
+                event.caller_function = frame.f_code.co_name
+                event.lineno = frame.f_lineno
+                if 'self' in frame.f_locals:
+                    event.caller_class = frame.f_locals['self'].__class__.__name__
+                else:
+                    event.caller_class = "None"
             else:
-                event.caller_class = "None"
+                raise ValueError("No caller frame found")
         except Exception:
             event.caller_file = "Unknown"
             event.caller_function = "Unknown"
@@ -347,7 +426,7 @@ class TelemetryLog:
         _check_deprecated_fields(event)
         self.__event_writer.write_event(event)
 
-    def increment(self, counter_type, value: int = 1):
+    def increment(self, counter_type, value: int = 1, stack_depth: int = 1):
         if not self.__metric_writer:
             return
             
@@ -357,14 +436,20 @@ class TelemetryLog:
         
         import sys
         try:
-            frame = sys._getframe(1)
-            event.caller_file = os.path.basename(frame.f_code.co_filename)
-            event.caller_function = frame.f_code.co_name
-            event.lineno = frame.f_lineno
-            if 'self' in frame.f_locals:
-                event.caller_class = frame.f_locals['self'].__class__.__name__
+            frame = sys._getframe(stack_depth)
+            while frame and os.path.basename(frame.f_code.co_filename) == "telemetry.py":
+                frame = frame.f_back
+                
+            if frame:
+                event.caller_file = os.path.basename(frame.f_code.co_filename)
+                event.caller_function = frame.f_code.co_name
+                event.lineno = frame.f_lineno
+                if 'self' in frame.f_locals:
+                    event.caller_class = frame.f_locals['self'].__class__.__name__
+                else:
+                    event.caller_class = "None"
             else:
-                event.caller_class = "None"
+                raise ValueError("No caller frame found")
         except Exception:
             event.caller_file = "Unknown"
             event.caller_function = "Unknown"

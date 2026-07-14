@@ -96,3 +96,37 @@ def test_telemetry_concurrency_lossless(tmp_path):
             count += 1
             
     assert count == 1000
+
+def test_telemetry_log_event(tmp_path):
+    settings = EventSettings(name=f"TEST_LOG_EVENT_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    # Test setting a standard field
+    telemetry.log_event(general_note="Test log_event")
+    
+    writer = telemetry._TelemetryLog__event_writer
+    writer.queue.join()
+    time.sleep(0.1)
+
+def test_telemetry_event_context_success(tmp_path):
+    settings = EventSettings(name=f"TEST_CTX_SUCCESS_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    with telemetry.event_context(general_note="Context Test"):
+        time.sleep(0.05)
+        
+    writer = telemetry._TelemetryLog__event_writer
+    writer.queue.join()
+    time.sleep(0.1)
+
+def test_telemetry_event_context_exception(tmp_path):
+    settings = EventSettings(name=f"TEST_CTX_FAIL_{tmp_path.name}", logs_base_dir=str(tmp_path))
+    telemetry = TelemetryLog(settings)
+    
+    with pytest.raises(ValueError, match="Test Error"):
+        with telemetry.event_context(general_note="Exception Test"):
+            raise ValueError("Test Error")
+            
+    writer = telemetry._TelemetryLog__event_writer
+    writer.queue.join()
+    time.sleep(0.1)

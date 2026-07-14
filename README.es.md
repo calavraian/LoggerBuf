@@ -7,6 +7,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://github.com/calavraian/LoggerBuf/actions/workflows/ci.yml/badge.svg)](https://github.com/calavraian/LoggerBuf/actions)
 
+**[Visita el sitio oficial: loggerbuf.dev](https://loggerbuf.dev)**
+
 </div>
 
 🇺🇸 [English](README.md) | 🇪🇸 Español
@@ -144,20 +146,55 @@ Nuestro formateador revela al instante el *dónde* y el *qué* de cualquier regi
 - `message::> [Payload]`: El mensaje real o el objeto JSON serializado.
 
 ### 2. Eventos Analíticos (Telemetría)
-La Telemetría usa Protobuf. Cada evento que rastrees debe ser categorizado usando tus enums personalizados `EventType` y `EventStatus` para asegurar la consistencia. Al igual que el debugger, la Telemetría inyecta automáticamente las marcas de tiempo y el enrutamiento. tras bambalinas.
+La Telemetría usa Protobuf para registrar eventos estructurados. Cada evento se categoriza mediante `EventType` y `EventStatus`. LoggerBuf inyecta automáticamente marcas de tiempo, nombres de archivo, líneas y metadatos del sistema.
+
+**Forma 1: Método Estándar (`log_event`)**
+La forma más sencilla de registrar un evento. Puedes pasar cualquier campo definido en tu `main_data.proto` como un argumento por palabra clave (kwargs).
 
 ```python
-from telemetry import TelemetryLog
-from data_logs import Event, EventType, EventStatus
+from loggerbuf.telemetry import TelemetryLog
 
-# 1. Initialize Logger
 telemetry = TelemetryLog("MAIN")
 
-# 2. Create and populate Event
-event = Event()
-event.event_type = EventType.EVENT_DATA_BASE_PROCESSING
+# Dispara un evento de forma asíncrona
+telemetry.log_event(
+    event_type="EVENT_DATA_BASE_PROCESSING",
+    general_note="Usuario registrado exitosamente",
+    status="STATUS_COMPLETED",
+    duration_ms=150
+)
+```
+
+**Forma 2: Context Manager (`event_context`)**
+Ideal para rastrear la ejecución de un bloque de código. Calcula automáticamente la duración (`duration_ms`) y establecerá el estado a `STATUS_ERROR` si ocurre una excepción no manejada dentro del bloque.
+
+```python
+from loggerbuf.telemetry import TelemetryLog
+
+telemetry = TelemetryLog("MAIN")
+
+with telemetry.event_context(general_note="Procesando migración de base de datos"):
+    # ... tu código aquí ...
+    # duration_ms se rastrea automáticamente y el evento se dispara al salir del bloque
+    pass
+```
+
+**Forma 3: Construcción Manual (`send`)**
+Si necesitas control absoluto, puedes construir el objeto Protobuf manualmente:
+
+```python
+from loggerbuf.telemetry import TelemetryLog
+from loggerbuf import schema_loader
+
+main_data_pb2 = schema_loader.get_main_data_pb2()
+registry_pb2 = schema_loader.get_registry_pb2()
+
+telemetry = TelemetryLog("MAIN")
+
+event = main_data_pb2.Event()
+event.event_type = registry_pb2.EventType.EVENT_DATA_BASE_PROCESSING
 event.general_note = "Usuario registrado exitosamente"
-event.status = EventStatus.STATUS_COMPLETED
+event.status = registry_pb2.EventStatus.STATUS_PENDING
 
 # Envíalo a la cola binaria asíncrona
 telemetry.send(event)
