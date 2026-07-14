@@ -94,19 +94,21 @@ There are three ways to log events. Always prefer `log_event` or `event_context`
 #### Way 1: Using `log_event` (Recommended for single actions)
 Allows passing metadata directly as kwargs. If using sub-events, instantiate the sub-event first and pass it as a kwarg matching its field name in `main_data.proto`.
 ```python
-from loggerbuf_schemas.registry_pb2 import EVENT_MAIN, STATUS_COMPLETED
-from loggerbuf_schemas.demouserevent_event_pb2 import DemoUserEvent
+from loggerbuf import schema_loader
+
+registry_pb2 = schema_loader.get_registry_pb2()
+demo_pb2 = schema_loader.get_module("demouserevent_event_pb2")
 
 # Initialize the sub-event for custom data
-user_event = DemoUserEvent(
+user_event = demo_pb2.DemoUserEvent(
     name="Process1", 
     counter=42
 )
 
 # Pass it along with standard main event fields
 telemetry.log_event(
-    event_type=EVENT_MAIN,
-    status=STATUS_COMPLETED,
+    event_type=registry_pb2.EventType.EVENT_MAIN,
+    status=registry_pb2.EventStatus.STATUS_COMPLETED,
     general_note="Process finished successfully",
     user_event=user_event  # Sub-event kwarg!
 )
@@ -116,9 +118,9 @@ telemetry.log_event(
 Use the context manager (`with`) to wrap a block of code. It automatically calculates `duration_ms` and traps unhandled exceptions (changing status to `STATUS_ERROR`).
 ```python
 with telemetry.event_context(
-    event_type=EVENT_MAIN, 
+    event_type=registry_pb2.EventType.EVENT_MAIN, 
     general_note="Running heavy process",
-    user_event=DemoUserEvent(name="HeavyTask")
+    user_event=demo_pb2.DemoUserEvent(name="HeavyTask")
 ) as ctx:
     # Do some work...
     # The event is automatically dispatched when exiting the block!
@@ -128,12 +130,20 @@ with telemetry.event_context(
 #### Way 3: Manual Building (Legacy / Complex manipulation)
 Only use this if you need complex mutations across multiple functions before dispatching.
 ```python
-from loggerbuf_schemas.main_data_pb2 import Event
+main_data_pb2 = schema_loader.get_main_data_pb2()
 
-main_data = Event()
-main_data.event_type = EVENT_MAIN
-main_data.user_event.CopyFrom(DemoUserEvent(name="Manual"))
+main_data = main_data_pb2.Event()
+main_data.event_type = registry_pb2.EventType.EVENT_MAIN
+main_data.user_event.CopyFrom(demo_pb2.DemoUserEvent(name="Manual"))
 telemetry.create_event(main_data)
+```
+
+#### Way 4: Incrementing Counters
+Counters are extremely lightweight and should be used for high-frequency events.
+```python
+def increment_page_views():
+    # Use counters for high-frequency metrics
+    telemetry.increment(registry_pb2.CounterType.COUNTER_GENERIC, 1)
 ```
 
 ### 3. Missing Information
