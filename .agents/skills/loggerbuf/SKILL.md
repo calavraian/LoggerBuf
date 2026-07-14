@@ -19,7 +19,7 @@ When creating a new event schema, encourage robust metadata collection. A good t
 * **Context:** `ip_address`, `user_agent`, `app_version`
 * **State:** `status` (enum), `duration_ms` (int64), `error_code` (string)
 * **Temporal:** `timestamp` (int64) 
-*(Note: Only add fields that make sense for the specific business logic, but err on the side of comprehensive analytics).*
+(Note: Only add fields that make sense for the specific business logic, but err on the side of comprehensive analytics).
 
 ## Custom Event Types, Statuses, and Counters
 In LoggerBuf, `EventType`, `EventStatus`, and `CounterType` are defined in `registry.proto`.
@@ -38,13 +38,20 @@ To keep the registry clean, values are assigned in **blocks or ranges**.
 ## CLI Usage (Schema Management)
 **CRITICAL:** NEVER edit the `.proto` files manually. ALWAYS use the `loggerbuf` CLI within the virtual environment.
 
-Before running any CLI command, ensure you are operating in the correct Python environment:
+Before running any CLI command, ensure you are operating in the correct Python environment. If the project uses a virtual environment (like `venv/` or `.venv/`), activate it first:
 ```bash
 # Example for standard venv (adapt if using Poetry, Conda, or global/container envs)
 source venv/bin/activate
 ```
 
 If you need to explore arguments for a command, use `--help` (e.g., `loggerbuf create-event --help`).
+
+### Project Setup
+If setting up LoggerBuf for the first time in a new project, you MUST initialize it:
+```bash
+loggerbuf init
+```
+This creates the required `loggerbuf_schemas` directory and global configs.
 
 ### Complete CLI Command List
 * `loggerbuf init`: Initializes the project directory and schemas.
@@ -55,13 +62,16 @@ If you need to explore arguments for a command, use `--help` (e.g., `loggerbuf c
 * `loggerbuf deprecate-subfield <message_name> <field_name>`: Deprecates an existing field. **GOLDEN RULE:** NEVER delete a field from a proto schema, ALWAYS deprecate it and create a new one.
 * `loggerbuf event add-type <event_name>` / `loggerbuf event add-status <event_name>`: Adds standardized Type/Status enums to an event (respecting range blocks).
 * `loggerbuf counter add-type <name>`: Adds a new counter block for high-frequency metrics.
-* `loggerbuf decode <file.bin>`: Decodes a binary telemetry log file to standard output.
+* `loggerbuf decode <file.bin>`: Decodes a binary telemetry log file to standard output (JSON-like).
 * `loggerbuf decode-debug <file.log>`: Interactively decodes specific lines from a text debug log.
+* `loggerbuf stress-test`: Runs a concurrency benchmark.
+* `loggerbuf config init`: Generates a `loggerbuf.json` configuration file (already done if you used `loggerbuf init`).
 
 ## Python Implementation Best Practices
 
 ### 1. Initialization
 LoggerBuf exposes factories for initialization:
+
 ```python
 from loggerbuf import create_telemetry, create_debugger
 from loggerbuf import LogDestination
@@ -69,8 +79,14 @@ from loggerbuf import LogDestination
 # Zero-config (recommended for quickstarts)
 telemetry = create_telemetry()
 debugger = create_debugger()
+
+# Advanced config (custom paths)
+telemetry = create_telemetry(name="MAIN", logs_base_dir="/custom/telemetry")
+debugger = create_debugger(name="MAIN", logs_base_dir="/custom/debug", stream=LogDestination.CONSOLE_AND_FILE_HISTORY)
 ```
-*Modify `loggerbuf.json` for global behaviors instead of passing them in code.*
+
+**Note on Configuration (`loggerbuf.json`):**
+If you need to adjust global behaviors (like turning off console colors, changing log rotation thresholds, max file sizes, or default paths), DO NOT try to pass them all via code. Instead, modify the `loggerbuf.json` file that is created in the project root after running `loggerbuf init`. This file contains all the available parameters to tweak the library's behavior.
 
 ### 2. Ways to Log (The DRY Pattern)
 There are three ways to log events. Always prefer `log_event` or `event_context` over manual building for better Developer Experience.
@@ -125,7 +141,9 @@ If the user asks you to implement an event but hasn't provided all the data fiel
 
 ## Summary Checklist for Agents
 1. Did I check/activate the correct Python environment (e.g., `venv`) if applicable?
-2. Did I use the CLI to alter the schema and run `loggerbuf build` afterwards?
-3. Did I ask the user for range blocks before creating custom Statuses/Types/Counters?
-4. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
-5. Did I deprecate instead of deleting fields?
+2. Did I run `loggerbuf init` if this is a new project?
+3. Did I use the CLI to alter the schema?
+4. Did I run `loggerbuf build` after changing the schema?
+5. Did I ask the user for range blocks before creating custom Statuses/Types/Counters?
+6. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
+7. Did I deprecate instead of deleting fields?
