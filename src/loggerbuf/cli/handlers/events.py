@@ -16,11 +16,14 @@ def _write_proto(content: str):
         f.write(content)
 
 def _get_max_value(enum_content: str) -> int:
-    """Finds the absolute maximum integer value used in the enum body."""
-    matches = re.findall(r'=\s*(\d+)\s*;', enum_content)
-    if not matches:
+    """Finds the absolute maximum integer value used or reserved in the enum body."""
+    assigned_matches = re.findall(r'=\s*(\d+)\s*;', enum_content)
+    reserved_matches = re.findall(r'//\s*Range:\s*\d+-(\d+)', enum_content)
+    
+    all_values = [int(m) for m in assigned_matches] + [int(m) for m in reserved_matches]
+    if not all_values:
         return 0
-    return max(int(m) for m in matches)
+    return max(all_values)
 
 def _append_to_enum(proto_content: str, enum_name: str, block_name: str, items: List[str], reserve: int) -> str:
     """
