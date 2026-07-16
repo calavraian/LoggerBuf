@@ -19,7 +19,8 @@ def protos_group():
     pass
 
 @protos_group.command(name="init")
-def protos_init_cmd():
+@click.option('--demo', is_flag=True, help="Include demo events and schemas.")
+def protos_init_cmd(demo=False):
     """Initializes the Protos structure and the Registry in the local project."""
     try:
         from ..config import ConfigManager
@@ -28,20 +29,21 @@ def protos_init_cmd():
         if os.path.exists(protos_dir) and os.listdir(protos_dir):
             click.secho(f"[{protos_dir}] is already initialized.", fg="green")
         else:
-            protos.init()
+            protos.init(demo=demo)
             click.secho(f"[{protos_dir}] created and initialized successfully.", fg="green")
     except Exception as e:
         click.secho(f"Error: {e}", fg="red")
         sys.exit(1)
 
 @cli.command()
+@click.option('--demo', is_flag=True, help="Include demo events and schemas.")
 @click.pass_context
-def init(ctx):
+def init(ctx, demo):
     """Bootstraps a new LoggerBuf project in a single command."""
     click.secho("Starting LoggerBuf project initialization...", fg="cyan")
     try:
         ctx.invoke(config_init)
-        ctx.invoke(protos_init_cmd)
+        ctx.invoke(protos_init_cmd, demo=demo)
         ctx.invoke(build)
         click.secho("Project initialized successfully! You are ready to log.", fg="green", bold=True)
     except Exception as e:

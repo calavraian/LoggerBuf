@@ -95,7 +95,7 @@ message CounterEvent {{
 }}
 """
 
-def init():
+def init(demo=False):
     """Initializes the proto structure and registry."""
     protos_dir = get_protos_dir()
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -107,10 +107,27 @@ def init():
     else:
         os.makedirs(protos_dir, exist_ok=True)
         # Copy base schemas
-        for filename in ["registry.proto", "main_data.proto", "demo_event.proto"]:
+        files_to_copy = ["registry.proto", "main_data.proto"]
+        if demo:
+            files_to_copy.append("demo_event.proto")
+            
+        for filename in files_to_copy:
             src = os.path.join(source_protos, filename)
+            dst = os.path.join(protos_dir, filename)
             if os.path.exists(src):
-                shutil.copy(src, protos_dir)
+                if not demo and filename == "registry.proto":
+                    with open(src, "r") as f:
+                        content = f.read()
+                    
+                    # Strip specific demo statuses
+                    content = re.sub(r'\s*// Specific statuses for the demo user event.*?DEMO_EVENT_STATUS_FAILED = 53;', '', content, flags=re.DOTALL)
+                    # Strip specific demo event types
+                    content = re.sub(r'\s*// Specific event types for the demo user event.*?DEMO_EVENT_DATA_STORED = 105;', '', content, flags=re.DOTALL)
+                    
+                    with open(dst, "w") as f:
+                        f.write(content)
+                else:
+                    shutil.copy(src, protos_dir)
                 
     registry.init_registry()
 
