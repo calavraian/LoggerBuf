@@ -9,19 +9,29 @@ def runner():
     return CliRunner()
 
 @patch('loggerbuf.cli.console.protos')
-@patch('loggerbuf.cli.console.ConfigManager')
+@patch('loggerbuf.config.ConfigManager')
 def test_protos_init(mock_cm, mock_protos, runner):
     mock_cm.return_value.get.return_value = "test_dir"
     result = runner.invoke(cli, ['protos', 'init'])
     assert result.exit_code == 0
     assert "created and initialized successfully" in result.output
-    mock_protos.init.assert_called_once()
+    mock_protos.init.assert_called_once_with(demo=False)
+    
+    result = runner.invoke(cli, ['protos', 'init', '--demo'])
+    assert result.exit_code == 0
+    mock_protos.init.assert_called_with(demo=True)
 
 @patch('loggerbuf.cli.console.build')
 @patch('loggerbuf.cli.console.protos_init_cmd')
 @patch('loggerbuf.cli.console.config_init')
 def test_init(mock_c_init, mock_p_init, mock_build, runner):
     result = runner.invoke(cli, ['init'])
+    assert result.exit_code == 0
+    assert "Project initialized successfully" in result.output
+    # Can't easily check click context invoke kwargs without more complex mocking,
+    # but we can test the outer command parsing.
+    
+    result = runner.invoke(cli, ['init', '--demo'])
     assert result.exit_code == 0
     assert "Project initialized successfully" in result.output
 
