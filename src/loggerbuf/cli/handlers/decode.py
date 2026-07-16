@@ -45,6 +45,15 @@ def decode_file(filepath, verify_key=None, skip_integrity=False, is_counter=Fals
                 break
             
             size = int.from_bytes(header, byteorder='big')
+            
+            # Defensive check for accidentally passing a text/JSON file instead of a binary log
+            if event_index == 0:
+                if header[0] == ord('{') or size > 10 * 1024 * 1024:
+                    click.secho(f"Error: '{filepath}' doesn't look like a valid binary telemetry log.", fg='red', err=True)
+                    click.secho(f"If this is a text file, try using 'loggerbuf decode-debug' instead.", fg='yellow', err=True)
+                    import sys
+                    sys.exit(1)
+                    
             payload = f.read(size)
             if len(payload) < size:
                 click.secho(f"Warning: Truncated payload of size {size} in {filepath}", fg='red', err=True)
@@ -177,6 +186,12 @@ def decode_debug_file(filepath):
             try:
                 yield json.loads(line)
             except json.JSONDecodeError as e:
+                if line_num == 1 and ('\x00' in line or not line.isprintable()):
+                    import click
+                    import sys
+                    click.secho(f"Error: '{filepath}' appears to be a binary log.", fg='red', err=True)
+                    click.secho(f"Try using 'loggerbuf decode' instead.", fg='yellow', err=True)
+                    sys.exit(1)
                 print(f"Warning: Failed to decode JSON at {filepath}:{line_num}: {e}", file=sys.stderr)
 
 def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None, tail: int = None):
