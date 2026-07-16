@@ -51,10 +51,14 @@ If setting up LoggerBuf for the first time in a new project, you MUST initialize
 ```bash
 loggerbuf init
 ```
+By default, this creates a clean schema environment without demo events. If you want to include the demo event configuration for testing or learning, run:
+```bash
+loggerbuf init --demo
+```
 This creates the required `loggerbuf_schemas` directory and global configs.
 
 ### Complete CLI Command List
-* `loggerbuf init`: Initializes the project directory and schemas.
+* `loggerbuf init [--demo]`: Initializes the project directory and schemas. Use `--demo` to include demo events.
 * `loggerbuf build`: Compiles the schema (`main_data.proto`) into Python classes. Run this after ANY modification to the schema.
 * `loggerbuf create-event <event_name> --field <name>:<type>`: Creates a new event block. Use `--field` multiple times for non-interactive mode.
 * `loggerbuf register-event <field_name> <message_name>`: Registers a new event inside the global `main_data.proto`.
