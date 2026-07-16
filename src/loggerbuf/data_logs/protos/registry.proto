@@ -57,7 +57,7 @@ enum EventType {
 */
 enum CounterType {
     // Generic counter types
-    // Range: 0-100
+    // Range: 0-10
     // Next value: 2
     COUNTER_UNSPECIFIED = 0;
     COUNTER_GENERIC = 1;
