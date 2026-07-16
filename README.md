@@ -34,6 +34,11 @@ To prep your LoggerBuf project, simply run the master command:
 ```bash
 loggerbuf init
 ```
+This will initialize a completely clean schema structure without demo events. If you want to include the demonstration schema and events to learn how it works, you can use the `--demo` flag instead:
+```bash
+loggerbuf init --demo
+```
+
 This command automatically performs a step-by-step initialization:
 1. `loggerbuf config init`: Generates `loggerbuf.json` to customize settings.
 2. `loggerbuf protos init`: Creates the local `loggerbuf_schemas/` directory with the base schemas.

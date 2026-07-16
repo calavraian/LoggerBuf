@@ -34,12 +34,19 @@ Para preparar tu proyecto LoggerBuf, simplemente ejecuta el comando maestro:
 ```bash
 loggerbuf init
 ```
-Este comando realiza la inicialización paso a paso automáticamente:
+Esto inicializará una estructura de esquemas completamente limpia sin eventos de demostración. Si deseas incluir el esquema y los eventos de demostración para aprender cómo funciona, puedes usar la bandera `--demo` en su lugar:
+```bash
+loggerbuf init --demo
+```
+
+Este comando ejecuta automáticamente una inicialización paso a paso:
 1. `loggerbuf config init`: Genera `loggerbuf.json` para personalizar ajustes.
-2. `loggerbuf protos init`: Crea el directorio local `loggerbuf_schemas/` con los esquemas base.
+2. `loggerbuf protos init`: Crea la carpeta local `loggerbuf_schemas/` con los esquemas base.
 3. `loggerbuf build`: Compila las clases de Python automáticamente.
 
 > **[Nota de Control Total]** Si lo prefieres, en lugar de usar `loggerbuf init`, puedes ejecutar cada uno de esos 3 pasos anteriores manualmente uno por uno. Esto te da un mayor control sobre cada fase de la inicialización antes de la compilación final.
+
+¡Ahora estás listo para registrar eventos! También puedes ejecutar estos subcomandos individualmente si prefieres una configuración iterativa.
 
 ---
 
