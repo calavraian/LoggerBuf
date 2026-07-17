@@ -92,17 +92,14 @@ debugger = create_debugger(name="MAIN", logs_base_dir="/custom/debug", stream=Lo
 **Note on Configuration (`loggerbuf.json`):**
 If you need to adjust global behaviors (like turning off console colors, changing log rotation thresholds, max file sizes, or default paths), DO NOT try to pass them all via code. Instead, modify the `loggerbuf.json` file that is created in the project root after running `loggerbuf init`. This file contains all the available parameters to tweak the library's behavior.
 
-### 2. Importing Schemas (The Schema Loader)
-**CRITICAL:** NEVER import directly from the generated protobuf files (e.g., `from loggerbuf_schemas.main_data_pb2 import Event`). The generated files might change or be located differently depending on the project structure.
-ALWAYS use the `schema_loader` facade to get references to your classes:
+### 2. Importing Schemas
+**CRITICAL:** The `loggerbuf build` command automatically generates a Python facade in the schemas directory (by default `loggerbuf_schemas/__init__.py`).
+You must ALWAYS import your events, statuses, and types directly from this facade. NEVER import from the raw `_pb2` files, and DO NOT use `schema_loader` in the user's application code (it is meant for internal library use).
 
 ```python
-from loggerbuf import schema_loader
-
-# Correct way to get schemas
-registry_pb2 = schema_loader.get_registry_pb2()
-main_data_pb2 = schema_loader.get_main_data_pb2()
-demo_pb2 = schema_loader.get_module("demouserevent_event_pb2") # For sub-events
+# Correct way to get schemas in the user's project
+from loggerbuf_schemas import EventType, EventStatus, Event, CounterType
+from loggerbuf_schemas import DemoUserEvent # For sub-events
 ```
 
 ### 3. Ways to Log (The DRY Pattern)
@@ -111,21 +108,18 @@ There are three ways to log events. You **MUST** prefer `log_event` or `event_co
 #### Way 1: Using `log_event` (Recommended for single actions)
 Allows passing metadata directly as kwargs. If using sub-events, instantiate the sub-event first and pass it as a kwarg matching its field name in `main_data.proto`.
 ```python
-from loggerbuf import schema_loader
-
-registry_pb2 = schema_loader.get_registry_pb2()
-demo_pb2 = schema_loader.get_module("demouserevent_event_pb2")
+from loggerbuf_schemas import EventType, EventStatus, DemoUserEvent
 
 # Initialize the sub-event for custom data
-user_event = demo_pb2.DemoUserEvent(
+user_event = DemoUserEvent(
     name="Process1", 
     counter=42
 )
 
 # Pass it along with standard main event fields
 telemetry.log_event(
-    event_type=registry_pb2.EventType.EVENT_MAIN,
-    status=registry_pb2.EventStatus.STATUS_COMPLETED,
+    event_type=EventType.EVENT_MAIN,
+    status=EventStatus.STATUS_COMPLETED,
     general_note="Process finished successfully",
     user_event=user_event  # Sub-event kwarg!
 )
@@ -134,10 +128,12 @@ telemetry.log_event(
 #### Way 2: Using `event_context` (Recommended for tracking blocks/duration)
 Use the context manager (`with`) to wrap a block of code. It automatically calculates `duration_ms` and traps unhandled exceptions (changing status to `STATUS_ERROR`).
 ```python
+from loggerbuf_schemas import EventType, DemoUserEvent
+
 with telemetry.event_context(
-    event_type=registry_pb2.EventType.EVENT_MAIN, 
+    event_type=EventType.EVENT_MAIN, 
     general_note="Running heavy process",
-    user_event=demo_pb2.DemoUserEvent(name="HeavyTask")
+    user_event=DemoUserEvent(name="HeavyTask")
 ) as ctx:
     # Do some work...
     # The event is automatically dispatched when exiting the block!
@@ -147,22 +143,22 @@ with telemetry.event_context(
 #### Way 3: Manual Building (Legacy / Complex manipulation)
 **AVOID IF POSSIBLE.** Only use this if you need complex mutations across multiple functions before dispatching (e.g. passing the `Event` object around). Do NOT use this as your default approach.
 ```python
-main_data_pb2 = schema_loader.get_main_data_pb2()
-registry_pb2 = schema_loader.get_registry_pb2()
-demo_pb2 = schema_loader.get_module("demouserevent_event_pb2")
+from loggerbuf_schemas import Event, EventType, DemoUserEvent
 
-main_data = main_data_pb2.Event()
-main_data.event_type = registry_pb2.EventType.EVENT_MAIN
-main_data.user_event.CopyFrom(demo_pb2.DemoUserEvent(name="Manual"))
+main_data = Event()
+main_data.event_type = EventType.EVENT_MAIN
+main_data.user_event.CopyFrom(DemoUserEvent(name="Manual"))
 telemetry.create_event(main_data)
 ```
 
 #### Way 4: Incrementing Counters
 Counters are extremely lightweight and should be used for high-frequency events.
 ```python
+from loggerbuf_schemas import CounterType
+
 def increment_page_views():
     # Use counters for high-frequency metrics
-    telemetry.increment(registry_pb2.CounterType.COUNTER_GENERIC, 1)
+    telemetry.increment(CounterType.COUNTER_GENERIC, 1)
 ```
 
 ### 4. Missing Information
@@ -174,6 +170,6 @@ If the user asks you to implement an event but hasn't provided all the data fiel
 3. Did I use the CLI to alter the schema?
 4. Did I run `loggerbuf build` after changing the schema?
 5. Did I ask the user for range blocks before creating custom Statuses/Types/Counters?
-6. Did I use `schema_loader` instead of importing directly from `loggerbuf_schemas`?
+6. Did I import classes/enums directly from `loggerbuf_schemas` instead of using `_pb2` files?
 7. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
 8. Did I deprecate instead of deleting fields?
