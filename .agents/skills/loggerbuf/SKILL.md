@@ -92,8 +92,21 @@ debugger = create_debugger(name="MAIN", logs_base_dir="/custom/debug", stream=Lo
 **Note on Configuration (`loggerbuf.json`):**
 If you need to adjust global behaviors (like turning off console colors, changing log rotation thresholds, max file sizes, or default paths), DO NOT try to pass them all via code. Instead, modify the `loggerbuf.json` file that is created in the project root after running `loggerbuf init`. This file contains all the available parameters to tweak the library's behavior.
 
-### 2. Ways to Log (The DRY Pattern)
-There are three ways to log events. Always prefer `log_event` or `event_context` over manual building for better Developer Experience.
+### 2. Importing Schemas (The Schema Loader)
+**CRITICAL:** NEVER import directly from the generated protobuf files (e.g., `from loggerbuf_schemas.main_data_pb2 import Event`). The generated files might change or be located differently depending on the project structure.
+ALWAYS use the `schema_loader` facade to get references to your classes:
+
+```python
+from loggerbuf import schema_loader
+
+# Correct way to get schemas
+registry_pb2 = schema_loader.get_registry_pb2()
+main_data_pb2 = schema_loader.get_main_data_pb2()
+demo_pb2 = schema_loader.get_module("demouserevent_event_pb2") # For sub-events
+```
+
+### 3. Ways to Log (The DRY Pattern)
+There are three ways to log events. You **MUST** prefer `log_event` or `event_context` over manual building to keep the code clean and maintainable. Use the manual building approach ONLY if there is a strict technical limitation preventing the use of the facades.
 
 #### Way 1: Using `log_event` (Recommended for single actions)
 Allows passing metadata directly as kwargs. If using sub-events, instantiate the sub-event first and pass it as a kwarg matching its field name in `main_data.proto`.
@@ -132,9 +145,11 @@ with telemetry.event_context(
 ```
 
 #### Way 3: Manual Building (Legacy / Complex manipulation)
-Only use this if you need complex mutations across multiple functions before dispatching.
+**AVOID IF POSSIBLE.** Only use this if you need complex mutations across multiple functions before dispatching (e.g. passing the `Event` object around). Do NOT use this as your default approach.
 ```python
 main_data_pb2 = schema_loader.get_main_data_pb2()
+registry_pb2 = schema_loader.get_registry_pb2()
+demo_pb2 = schema_loader.get_module("demouserevent_event_pb2")
 
 main_data = main_data_pb2.Event()
 main_data.event_type = registry_pb2.EventType.EVENT_MAIN
@@ -150,7 +165,7 @@ def increment_page_views():
     telemetry.increment(registry_pb2.CounterType.COUNTER_GENERIC, 1)
 ```
 
-### 3. Missing Information
+### 4. Missing Information
 If the user asks you to implement an event but hasn't provided all the data fields needed for the schema, **STOP and ask the user** what data types and fields are required for the business logic. Don't guess their analytics fields.
 
 ## Summary Checklist for Agents
@@ -159,5 +174,6 @@ If the user asks you to implement an event but hasn't provided all the data fiel
 3. Did I use the CLI to alter the schema?
 4. Did I run `loggerbuf build` after changing the schema?
 5. Did I ask the user for range blocks before creating custom Statuses/Types/Counters?
-6. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
-7. Did I deprecate instead of deleting fields?
+6. Did I use `schema_loader` instead of importing directly from `loggerbuf_schemas`?
+7. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
+8. Did I deprecate instead of deleting fields?
