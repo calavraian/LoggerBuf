@@ -133,17 +133,27 @@ telemetry.log_event(
 
 #### Way 2: Using `event_context` (Recommended for tracking blocks/duration)
 Use the context manager (`with`) to wrap a block of code. It automatically calculates `duration_ms` and traps unhandled exceptions (changing status to `STATUS_ERROR`).
+
+**CRITICAL NOTE FOR SUB-EVENTS:** LoggerBuf DOES NOT use a `oneof` wrapper for custom events. The CLI directly adds new fields to the `Event` message (e.g. `user_command`, `scryfall_query`).
+Therefore, you must pass the sub-event as a kwarg matching its exact field name (e.g., `user_command=uc`). 
+If you need to mutate the sub-event *during* the context block, keep a reference to the sub-event object rather than trying to extract it from the context manager (`ctx`).
+
 ```python
 from loggerbuf_schemas import EventType, DemoUserEvent
 
+# 1. Instantiate the sub-event BEFORE the context block
+user_event = DemoUserEvent(name="HeavyTask")
+
+# 2. Pass it with its exact field name
 with telemetry.event_context(
     event_type=EventType.EVENT_MAIN, 
     general_note="Running heavy process",
-    user_event=DemoUserEvent(name="HeavyTask")
+    user_event=user_event
 ) as ctx:
-    # Do some work...
-    # The event is automatically dispatched when exiting the block!
-    pass
+    # 3. Mutate the object directly via your local reference
+    user_event.counter = 100
+    
+    # The event (with updated counter) is automatically dispatched when exiting!
 ```
 
 #### Way 3: Manual Building (Legacy / Complex manipulation)
