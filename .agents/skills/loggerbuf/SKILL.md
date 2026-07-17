@@ -94,12 +94,18 @@ If you need to adjust global behaviors (like turning off console colors, changin
 
 ### 2. Importing Schemas
 **CRITICAL:** The `loggerbuf build` command automatically generates a Python facade in the schemas directory (by default `loggerbuf_schemas/__init__.py`).
-You must ALWAYS import your events, statuses, and types directly from this facade. NEVER import from the raw `_pb2` files, and DO NOT use `schema_loader` in the user's application code (it is meant for internal library use).
+You must ALWAYS import your events, statuses, and types directly from this facade. NEVER use `schema_loader` in the user's application code (it is meant for internal library use).
 
 ```python
 # Correct way to get schemas in the user's project
 from loggerbuf_schemas import EventType, EventStatus, Event, CounterType
 from loggerbuf_schemas import DemoUserEvent # For sub-events
+```
+
+**FALLBACK:** Only in extreme cases where the `loggerbuf_schemas/__init__.py` facade is broken or unavailable, you may fallback to importing directly from the raw `_pb2` files as a last resort:
+```python
+# Fallback ONLY
+from loggerbuf_schemas.demouserevent_event_pb2 import DemoUserEvent
 ```
 
 ### 3. Ways to Log (The DRY Pattern)
