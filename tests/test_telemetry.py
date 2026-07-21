@@ -1,7 +1,8 @@
 import os
 import time
 import pytest
-from loggerbuf.telemetry import TelemetryLog, EventSettings
+from unittest.mock import MagicMock
+from loggerbuf.telemetry import TelemetryLog, EventSettings, EventContext
 from loggerbuf import schema_loader
 main_data_pb2 = schema_loader.get_main_data_pb2()
 registry_pb2 = schema_loader.get_registry_pb2()
@@ -130,3 +131,35 @@ def test_telemetry_event_context_exception(tmp_path):
     writer = telemetry._TelemetryLog__event_writer
     writer.queue.join()
     time.sleep(0.1)
+
+def test_event_context_default_statuses():
+    telemetry_mock = MagicMock()
+    
+    with EventContext(telemetry_mock, event_type=1, base_kwargs={
+        "default_status": registry_pb2.EventStatus.STATUS_COMPLETED,
+        "error_status": registry_pb2.EventStatus.STATUS_FAILED
+    }) as ctx:
+        ctx.attach(some_val=1)
+        
+    telemetry_mock.log_event.assert_called_once()
+    args, kwargs = telemetry_mock.log_event.call_args
+    assert kwargs['status'] == registry_pb2.EventStatus.STATUS_COMPLETED
+    assert kwargs['some_val'] == 1
+    assert "default_status" not in kwargs
+    assert "error_status" not in kwargs
+
+def test_event_context_error_statuses():
+    telemetry_mock = MagicMock()
+    
+    try:
+        with EventContext(telemetry_mock, event_type=1, base_kwargs={
+            "default_status": registry_pb2.EventStatus.STATUS_COMPLETED,
+            "error_status": registry_pb2.EventStatus.STATUS_FAILED
+        }) as ctx:
+            raise ValueError("Test Error")
+    except ValueError:
+        pass
+        
+    telemetry_mock.log_event.assert_called_once()
+    args, kwargs = telemetry_mock.log_event.call_args
+    assert kwargs['status'] == registry_pb2.EventStatus.STATUS_FAILED

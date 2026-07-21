@@ -48,34 +48,4 @@ def test_init_agents_no_dir(mock_build, mock_protos_init, tmp_path):
     assert result.exit_code == 0
     assert "does not exist" in result.output
 
-def test_event_context_default_statuses():
-    telemetry_mock = MagicMock()
-    
-    with EventContext(telemetry_mock, event_type=1, base_kwargs={
-        "default_status": EventStatus.STATUS_COMPLETED,
-        "error_status": EventStatus.STATUS_FAILED
-    }) as ctx:
-        ctx.attach(some_val=1)
-        
-    telemetry_mock.log_event.assert_called_once()
-    args, kwargs = telemetry_mock.log_event.call_args
-    assert kwargs['status'] == EventStatus.STATUS_COMPLETED
-    assert kwargs['some_val'] == 1
-    assert "default_status" not in kwargs
-    assert "error_status" not in kwargs
 
-def test_event_context_error_statuses():
-    telemetry_mock = MagicMock()
-    
-    try:
-        with EventContext(telemetry_mock, event_type=1, base_kwargs={
-            "default_status": EventStatus.STATUS_COMPLETED,
-            "error_status": EventStatus.STATUS_FAILED
-        }) as ctx:
-            raise ValueError("Test Error")
-    except ValueError:
-        pass
-        
-    telemetry_mock.log_event.assert_called_once()
-    args, kwargs = telemetry_mock.log_event.call_args
-    assert kwargs['status'] == EventStatus.STATUS_FAILED
