@@ -34,6 +34,9 @@ message Event {{
     // The status of the event is set by the app. Update [Status] list.
     enum_control.EventStatus status = 4;
 
+    // The duration of the event context in milliseconds
+    int64 duration_ms = 5;
+
     // The name of the EventLogger instance (e.g. MAIN, SECURITY)
     string logger_name = 6;
 
@@ -48,9 +51,6 @@ message Event {{
 
     // The line number where the event was generated
     int32 lineno = 10;
-    
-    // The duration of the event context in milliseconds
-    int64 duration_ms = 11;
 
     // --- DYNAMIC EVENTS ---
 {dynamic_fields}

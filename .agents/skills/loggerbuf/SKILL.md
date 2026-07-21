@@ -26,14 +26,25 @@ In LoggerBuf, `EventType`, `EventStatus`, and `CounterType` are defined in `regi
 To keep the registry clean, values are assigned in **blocks or ranges**.
 
 - **EventStatus:** Represents the state of an event (e.g., PENDING, COMPLETED, FAILED).
-  - General statuses usually span the `0-50` range.
+  - General statuses span the `0-50` range. **NEVER modify or remove the core generic statuses (0-50)**.
   - Specific custom events should be assigned dedicated ranges (e.g., `51-100`, `101-150`) to avoid overlap.
 - **EventType:** Represents what happened (e.g., USER_SIGNUP, API_REQUEST).
-  - Generic events usually span `0-100`.
+  - Generic events span `0-100`. **NEVER modify or remove the core generic event types (0-100)**.
   - Specific domains should be assigned ranges (e.g., `101-200`, `201-300`).
 - **CounterType:** Represents metric counters.
 
 **Agent Rule for Custom Types:** If the user asks to create a new custom event, status, or counter, **DO NOT assume the range or limits**. Ask the user what block of numbers (range) should be reserved for this specific domain. Explain to the user that reserving blocks keeps the `registry.proto` organized.
+
+**CRITICAL FORMATTING RULE FOR REGISTRY.PROTO:** When adding a new block to `registry.proto` (even if done manually), you MUST include standard documentation comments describing the block, its range, and the next available value. Example:
+```proto
+    // User Authentication Events
+    // Range: 101-200
+    // Next value: 104
+    EVENT_AUTH_LOGIN = 101;
+    EVENT_AUTH_LOGOUT = 102;
+    EVENT_AUTH_PASSWORD_RESET = 103;
+```
+Failure to include `// Range:` and `// Next value:` will break the structural integrity of the registry.
 
 ## CLI Usage (Schema Management)
 **CRITICAL:** NEVER edit the `.proto` files manually. ALWAYS use the `loggerbuf` CLI within the virtual environment.
@@ -188,7 +199,7 @@ LoggerBuf uses Protocol Buffers to strictly enforce schemas. You must NEVER inve
 
 ### Internal Control Footprints & Snapshots
 LoggerBuf maintains internal control files (such as `.loggerbuf_schema_snapshot.json` and `.loggerbuf_registry.json`) to orchestrate telemetry generation and track hashes/states. **NEVER manually edit these internal control `.json` snapshots.**
-While you *should* use the provided CLI commands (`loggerbuf register-event`, `loggerbuf add-status`, etc.) to modify the system schemas, you MAY manually edit the `.proto` files (like `registry.proto` or `main_data.proto`) as a last resort if the CLI is failing, provided you are extremely careful with the Protobuf syntax. However, the JSON snapshots are strictly off-limits.
+While you *should* use the provided CLI commands (`loggerbuf register-event`, `loggerbuf add-status`, etc.) to modify the system schemas, you MAY manually edit the `.proto` files (like `registry.proto` or `main_data.proto`) as a last resort if the CLI is failing, provided you are extremely careful with the Protobuf syntax. However, the JSON snapshots are strictly off-limits. If editing `registry.proto`, **NEVER modify the core system blocks (EventStatus 0-50, EventType 0-100)** as they are essential for LoggerBuf's internal functioning.
 
 ### EventContext Exception Handling
 The `event_context` intercepts unhandled exceptions during the `with` block. By default, it uses `STATUS_FAILED` and embeds the error string into `general_note`. If you want to use a specific error status, you can pass `error_status` during initialization.
