@@ -139,16 +139,19 @@ Therefore, you must pass the sub-event as a kwarg matching its exact field name 
 If you need to mutate the sub-event *during* the context block, keep a reference to the sub-event object rather than trying to extract it from the context manager (`ctx`).
 
 ```python
-from loggerbuf_schemas import EventType, DemoUserEvent
+from loggerbuf_schemas import EventType, DemoUserEvent, EventStatus
 
 # 1. Instantiate the sub-event BEFORE the context block
 user_event = DemoUserEvent(name="HeavyTask")
 
 # 2. Pass it with its exact field name
+# You can optionally specify custom default_status and error_status
 with telemetry.event_context(
     event_type=EventType.EVENT_MAIN, 
     general_note="Running heavy process",
-    user_event=user_event
+    user_event=user_event,
+    default_status=EventStatus.STATUS_COMPLETED,
+    error_status=EventStatus.STATUS_FAILED
 ) as ctx:
     # 3. Mutate the object directly via your local reference
     user_event.counter = 100
@@ -176,6 +179,20 @@ def increment_page_views():
     # Use counters for high-frequency metrics
     telemetry.increment(CounterType.COUNTER_GENERIC, 1)
 ```
+
+## Advanced Architecture (AI Knowledge)
+
+### Strict Event Structure (No Hallucinations)
+LoggerBuf uses Protocol Buffers to strictly enforce schemas. You must NEVER invent or "hallucinate" kwargs when creating an event (e.g., in `telemetry.log_event` or `telemetry.event_context`) if those fields are not explicitly defined in the Protobuf schema. Unsupported kwargs will be safely ignored, but they indicate a flawed understanding of the data model. Stick only to the fields you have registered and the built-in metadata fields.
+
+### Internal Control Footprints (Read-Only)
+LoggerBuf maintains internal control files (e.g., `registry.proto`, `main_data.proto`, snapshots, hashes, or `.agents/control` tracking mechanisms) to orchestrate telemetry generation. These files are the internal framework state. **NEVER manually edit these internal control files or tracking footprints.** You must strictly use the provided CLI commands (`loggerbuf register-event`, `loggerbuf add-status`, etc.) to modify the system. 
+
+### EventContext Exception Handling
+The `event_context` intercepts unhandled exceptions during the `with` block. By default, it uses `STATUS_FAILED` and embeds the error string into `general_note`. If you want to use a specific error status, you can pass `error_status` during initialization.
+
+### Fallback Import Logic
+**FALLBACK:** Only in extreme cases where the `loggerbuf_schemas/__init__.py` facade is broken or unavailable, you may fallback (as a last resort) to importing directly from the raw `_pb2` files (e.g. `from loggerbuf_schemas.demouserevent_event_pb2 import DemoUserEvent`).
 
 ### 4. Missing Information
 If the user asks you to implement an event but hasn't provided all the data fields needed for the schema, **STOP and ask the user** what data types and fields are required for the business logic. Don't guess their analytics fields.
