@@ -14,6 +14,23 @@ def cli():
     """LoggerBuf CLI - Asynchronous Telemetry Framework."""
     pass
 
+@cli.group(name="agents")
+def agents_group():
+    """Manage AI Agent integrations and skills."""
+    pass
+
+@agents_group.command(name="sync")
+@click.option('--agents-dir', default=".agents/skills", help="Base directory to install the agent skill (must exist). Defaults to hidden folder '.agents/skills'.")
+def agents_sync_cmd(agents_dir):
+    """Download or update the official LoggerBuf agent SKILL.md."""
+    click.secho("Syncing Agent Skills...", fg="cyan")
+    try:
+        agents_handler.init_agents(base_dir=agents_dir)
+        click.secho("Agent skills synced successfully!", fg="green", bold=True)
+    except Exception as e:
+        click.secho(f"Sync failed: {e}", fg="red")
+        sys.exit(1)
+
 @cli.group(name="protos")
 def protos_group():
     """Manage Protocol Buffers schemas."""
