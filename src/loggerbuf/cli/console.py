@@ -6,6 +6,7 @@ from loggerbuf.cli.handlers import decode as decode_handler
 from loggerbuf.cli.handlers import stress
 from loggerbuf.cli.handlers import fields
 from loggerbuf.cli.handlers import events
+from loggerbuf.cli.handlers import agents as agents_handler
 from ..config import ConfigManager
 
 @click.group()
@@ -37,14 +38,21 @@ def protos_init_cmd(demo=False):
 
 @cli.command()
 @click.option('--demo', is_flag=True, help="Include demo events and schemas.")
+@click.option('--agents', is_flag=True, help="Download the official LoggerBuf agent SKILL.md.")
+@click.option('--agents-dir', default=".agents/skills", help="Base directory to install the agent skill (must exist). Defaults to hidden folder '.agents/skills'.")
 @click.pass_context
-def init(ctx, demo):
+def init(ctx, demo, agents, agents_dir):
     """Bootstraps a new LoggerBuf project in a single command."""
     click.secho("Starting LoggerBuf project initialization...", fg="cyan")
     try:
         ctx.invoke(config_init)
         ctx.invoke(protos_init_cmd, demo=demo)
         ctx.invoke(build)
+        
+        if agents:
+            click.secho("\nInstalling Agent Skills...", fg="cyan")
+            agents_handler.init_agents(base_dir=agents_dir)
+            
         click.secho("Project initialized successfully! You are ready to log.", fg="green", bold=True)
     except Exception as e:
         click.secho(f"Initialization failed: {e}", fg="red")

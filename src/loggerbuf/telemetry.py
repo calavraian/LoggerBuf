@@ -18,6 +18,11 @@ class EventContext:
     def __init__(self, telemetry_instance, event_type, base_kwargs):
         self.telemetry = telemetry_instance
         self.event_type = event_type
+        
+        # Extract default statuses and remove them from kwargs to prevent setattr errors
+        self.default_status = base_kwargs.pop('default_status', registry_pb2.EventStatus.STATUS_COMPLETED)
+        self.error_status = base_kwargs.pop('error_status', registry_pb2.EventStatus.STATUS_FAILED)
+        
         self.kwargs = base_kwargs
         self.start_time = None
 
@@ -34,10 +39,10 @@ class EventContext:
         self.kwargs["duration_ms"] = duration_ms
 
         if exc_type is not None:
-            status = registry_pb2.EventStatus.STATUS_FAILED
+            status = self.error_status
             self.kwargs["general_note"] = f"[{exc_type.__name__}] {str(exc_value)} | {self.kwargs.get('general_note', '')}"
         else:
-            status = registry_pb2.EventStatus.STATUS_COMPLETED
+            status = self.default_status
 
         self.telemetry.log_event(event_type=self.event_type, status=status, stack_depth=3, **self.kwargs)
         return False
