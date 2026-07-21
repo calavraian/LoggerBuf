@@ -185,8 +185,9 @@ def increment_page_views():
 ### Strict Event Structure (No Hallucinations)
 LoggerBuf uses Protocol Buffers to strictly enforce schemas. You must NEVER invent or "hallucinate" kwargs when creating an event (e.g., in `telemetry.log_event` or `telemetry.event_context`) if those fields are not explicitly defined in the Protobuf schema. Unsupported kwargs will be safely ignored, but they indicate a flawed understanding of the data model. Stick only to the fields you have registered and the built-in metadata fields.
 
-### Internal Control Footprints (Read-Only)
-LoggerBuf maintains internal control files (e.g., `registry.proto`, `main_data.proto`, snapshots, hashes, or `.agents/control` tracking mechanisms) to orchestrate telemetry generation. These files are the internal framework state. **NEVER manually edit these internal control files or tracking footprints.** You must strictly use the provided CLI commands (`loggerbuf register-event`, `loggerbuf add-status`, etc.) to modify the system. 
+### Internal Control Footprints & Snapshots
+LoggerBuf maintains internal control files (such as `.loggerbuf_schema_snapshot.json` and `.loggerbuf_registry.json`) to orchestrate telemetry generation and track hashes/states. **NEVER manually edit these internal control `.json` snapshots.**
+While you *should* use the provided CLI commands (`loggerbuf register-event`, `loggerbuf add-status`, etc.) to modify the system schemas, you MAY manually edit the `.proto` files (like `registry.proto` or `main_data.proto`) as a last resort if the CLI is failing, provided you are extremely careful with the Protobuf syntax. However, the JSON snapshots are strictly off-limits.
 
 ### EventContext Exception Handling
 The `event_context` intercepts unhandled exceptions during the `with` block. By default, it uses `STATUS_FAILED` and embeds the error string into `general_note`. If you want to use a specific error status, you can pass `error_status` during initialization.
