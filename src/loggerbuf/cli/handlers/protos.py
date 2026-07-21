@@ -48,6 +48,9 @@ message Event {{
 
     // The line number where the event was generated
     int32 lineno = 10;
+    
+    // The duration of the event context in milliseconds
+    int64 duration_ms = 11;
 
     // --- DYNAMIC EVENTS ---
 {dynamic_fields}
