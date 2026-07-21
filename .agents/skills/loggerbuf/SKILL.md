@@ -69,6 +69,7 @@ This creates the required `loggerbuf_schemas` directory and global configs.
 * `loggerbuf decode <file.bin>`: Decodes a binary telemetry log file to standard output (JSON-like).
 * `loggerbuf decode-debug <file.log>`: Interactively decodes specific lines from a text debug log.
 * `loggerbuf stress-test`: Runs a concurrency benchmark.
+* `loggerbuf agents sync`: Downloads or updates the official LoggerBuf agent SKILL.md without recompiling schemas.
 * `loggerbuf config init`: Generates a `loggerbuf.json` configuration file (already done if you used `loggerbuf init`).
 
 ## Python Implementation Best Practices

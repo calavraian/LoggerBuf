@@ -295,6 +295,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
 | `loggerbuf add-counter-type <Type>` | Agrega un nuevo tipo de contador a tu `registry.proto`. Soporta rangos: `--start` y `--end`. |
 | `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
+| `loggerbuf agents sync` | Descarga o actualiza el archivo SKILL.md oficial para agentes de IA sin recompilar esquemas. |
 
 ### Ejemplos Potentes del CLI
 

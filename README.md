@@ -311,6 +311,7 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf add-counter-type <Type>` | Adds a new counter type to your `registry.proto`. Supports ranges via `--start` and `--end`. |
 | `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
+| `loggerbuf agents sync` | Downloads or updates the official LoggerBuf agent SKILL.md without recompiling schemas. |
 
 ### Powerful CLI Examples
 

@@ -25,8 +25,10 @@ def agents_sync_cmd(agents_dir):
     """Download or update the official LoggerBuf agent SKILL.md."""
     click.secho("Syncing Agent Skills...", fg="cyan")
     try:
-        agents_handler.init_agents(base_dir=agents_dir)
-        click.secho("Agent skills synced successfully!", fg="green", bold=True)
+        if agents_handler.init_agents(base_dir=agents_dir):
+            click.secho("Agent skills synced successfully!", fg="green", bold=True)
+        else:
+            sys.exit(1)
     except Exception as e:
         click.secho(f"Sync failed: {e}", fg="red")
         sys.exit(1)
