@@ -34,9 +34,19 @@ Para preparar tu proyecto LoggerBuf, simplemente ejecuta el comando maestro:
 ```bash
 loggerbuf init
 ```
-Esto inicializará una estructura de esquemas completamente limpia sin eventos de demostración. Si deseas incluir el esquema y los eventos de demostración para aprender cómo funciona, puedes usar la bandera `--demo` en su lugar:
+
+Esto inicializará una estructura de esquemas completamente limpia sin eventos de demostración. 
+
+### Banderas de Inicialización
+Puedes personalizar el proceso de inicialización con las siguientes banderas:
+
+- `--demo`: Incluye el esquema de demostración y eventos para aprender cómo funciona.
+- `--agents`: Descarga y configura las reglas de IA (Agent Skills) para LoggerBuf. Esto es muy recomendable si planeas usar asistentes de IA para interactuar con tu código.
+- `--agents-dir <path>`: Especifica el directorio donde se descargarán las reglas del agente. Si se omite, el valor por defecto es `.agents/skills` (es decir, creará `.agents/skills/loggerbuf/SKILL.md`). Si provees una ruta como `.cursor/rules`, creará la carpeta `loggerbuf` dentro de ella (ej. `.cursor/rules/loggerbuf/SKILL.md`).
+
+Ejemplo combinando banderas:
 ```bash
-loggerbuf init --demo
+loggerbuf init --demo --agents
 ```
 
 Este comando ejecuta automáticamente una inicialización paso a paso:

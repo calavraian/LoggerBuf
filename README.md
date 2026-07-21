@@ -34,9 +34,19 @@ To prep your LoggerBuf project, simply run the master command:
 ```bash
 loggerbuf init
 ```
-This will initialize a completely clean schema structure without demo events. If you want to include the demonstration schema and events to learn how it works, you can use the `--demo` flag instead:
+
+This will initialize a completely clean schema structure without demo events. 
+
+### Init Flags
+You can customize the initialization process with the following flags:
+
+- `--demo`: Includes the demonstration schema and events to learn how it works.
+- `--agents`: Downloads and configures the AI Agent rules for LoggerBuf. This is highly recommended if you plan to use AI coding assistants to interact with your codebase.
+- `--agents-dir <path>`: Specifies the directory where the agent rules should be downloaded. If omitted, the default is `.agents/skills` (meaning it will create `.agents/skills/loggerbuf/SKILL.md`). If you provide a path like `.cursor/rules`, it will create the `loggerbuf` folder inside it (e.g. `.cursor/rules/loggerbuf/SKILL.md`).
+
+Example combining flags:
 ```bash
-loggerbuf init --demo
+loggerbuf init --demo --agents
 ```
 
 This command automatically performs a step-by-step initialization:
