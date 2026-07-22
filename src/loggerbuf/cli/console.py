@@ -297,7 +297,7 @@ def counter():
 @counter.command(name="add-type")
 @click.argument('name')
 @click.option('--counters', default="", help="Comma separated list of counters (e.g. CLICK,VIEW)")
-@click.option('--reserve', default=10, type=int, help="Number of extra indices to reserve for future counters.")
+@click.option('--reserve', default=10, type=int, help="Total number of indices to reserve for the counter block (including the provided counters).")
 def add_counter_type(name, counters, reserve):
     """Adds a new counter block and optional counters."""
     counter_list = [c.strip() for c in counters.split(",")] if counters else []
@@ -312,7 +312,7 @@ def add_counter_type(name, counters, reserve):
 @event.command()
 @click.argument('name')
 @click.option('--statuses', default="", help="Comma separated list of statuses (e.g. ST1,ST2)")
-@click.option('--reserve', default=10, type=int, help="Number of extra indices to reserve for future statuses.")
+@click.option('--reserve', default=10, type=int, help="Total number of indices to reserve for the status block (including the provided statuses).")
 def add_type(name, statuses, reserve):
     """Adds a new event type and optional statuses."""
     status_list = [s.strip() for s in statuses.split(",")] if statuses else []

@@ -56,3 +56,23 @@ def test_register_event_discovery_success(mock_find, mock_reg, mock_build, tmp_p
     
     mock_reg.assert_called_once_with("field", "UniqueMsg", "f1.proto")
     mock_build.assert_called_once()
+
+def test_init_copies_missing_files(tmp_path, monkeypatch):
+    """Test that init copies registry.proto if it is missing, even if the directory exists."""
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(tmp_path / "protos"))
+    monkeypatch.setattr("loggerbuf.cli.utils.registry.init_registry", MagicMock())
+    
+    protos_dir = tmp_path / "protos"
+    protos_dir.mkdir()
+    
+    # Simulate an existing file to trigger the old bug where it would abort
+    (protos_dir / "main_data.proto").write_text("existing content")
+    
+    # Call init
+    protos.init()
+    
+    # registry.proto should be copied because it was missing
+    assert (protos_dir / "registry.proto").exists()
+    
+    # main_data.proto should NOT be overwritten (it should still have "existing content")
+    assert (protos_dir / "main_data.proto").read_text() == "existing content"

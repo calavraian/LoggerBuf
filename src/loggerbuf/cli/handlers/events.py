@@ -94,10 +94,16 @@ def _add_status_to_block(proto_content: str, enum_name: str, block_keyword: str,
     updated_next_val = str(next_val + 1)
     suffix = enum_body[block_match.end(3):]
     
+    # suffix starts exactly after the digits of Next value. Usually it's "\n    STATUS = 1;\n..."
+    # We want to insert the new line at the END of this block of items.
+    # A block ends when we see a blank line, a comment (//), or the end of the string.
     lines = suffix.split('\n')
-    insert_idx = 0
-    for i, line in enumerate(lines):
-        if line.strip() == '' or line.strip().startswith('//'):
+    
+    # lines[0] is usually just "" because suffix starts with "\n"
+    insert_idx = 1
+    for i in range(1, len(lines)):
+        line = lines[i]
+        if line.strip() == '' or line.strip().startswith('//') or line.strip().startswith('}'):
             insert_idx = i
             break
     else:

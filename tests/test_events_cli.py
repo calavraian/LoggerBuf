@@ -103,3 +103,33 @@ def test_events_cli_list(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "DEMO_EVENT_STATUS_STARTED" in result.output
     assert "STATUS_UNSPECIFIED" not in result.output
+
+def test_events_cli_add_status_overflow(tmp_path, monkeypatch):
+    runner = CliRunner()
+    
+    import shutil
+    import os
+    
+    real_proto_dir = "loggerbuf_schemas"
+    if not os.path.exists(real_proto_dir):
+        real_proto_dir = "src/loggerbuf/data_logs/protos"
+    test_proto_dir = tmp_path / "protos"
+    test_proto_dir.mkdir()
+    shutil.copy(os.path.join(real_proto_dir, "registry.proto"), test_proto_dir / "registry.proto")
+    
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
+    
+    # Create a block with reserve 2 (slots: 0, 1)
+    result_add = runner.invoke(cli, ['event', 'add-type', 'OVERFLOW', '--statuses', 'ONE', '--reserve', '2'])
+    assert result_add.exit_code == 0, f"add-type failed: {result_add.output}"
+    
+    # Fill the block (slot 1)
+    result_fill = runner.invoke(cli, ['event', 'add-status', 'OVERFLOW', 'TWO'])
+    assert result_fill.exit_code == 0, f"add-status TWO failed: {result_fill.output}"
+    
+    # Attempt to exceed the block (slot 2) -> Should fail
+    result_fail = runner.invoke(cli, ['event', 'add-status', 'OVERFLOW', 'THREE'])
+    assert result_fail.exit_code != 0
+    assert "The reserved range for block 'OVERFLOW' is full" in str(result_fail.exception) or "The reserved range for block 'OVERFLOW' is full" in result_fail.output
