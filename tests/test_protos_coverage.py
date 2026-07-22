@@ -40,10 +40,9 @@ def test_register_event_discovery(tmp_path, monkeypatch):
     
     protos.register_event("my_event", "MyMessage", None)
     
-@patch('loggerbuf.cli.handlers.protos.build')
 @patch('loggerbuf.cli.utils.registry.register_event')
 @patch('loggerbuf.cli.handlers.fields._find_file_for_message')
-def test_register_event_discovery_success(mock_find, mock_reg, mock_build, tmp_path, monkeypatch):
+def test_register_event_discovery_success(mock_find, mock_reg, tmp_path, monkeypatch):
     """Test successful auto-discovery."""
     monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(tmp_path))
     
@@ -55,7 +54,6 @@ def test_register_event_discovery_success(mock_find, mock_reg, mock_build, tmp_p
     protos.register_event("field", "UniqueMsg", None)
     
     mock_reg.assert_called_once_with("field", "UniqueMsg", "f1.proto")
-    mock_build.assert_called_once()
 
 def test_init_copies_missing_files(tmp_path, monkeypatch):
     """Test that init copies registry.proto if it is missing, even if the directory exists."""

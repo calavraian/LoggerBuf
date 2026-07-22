@@ -41,7 +41,10 @@ def test_cli_protos_flow_e2e(tmp_path):
         
         # 3. Register Event
         result = runner.invoke(cli, ["register-event", "test_user_event", "TestUserEvent", "--file", "testuserevent_event.proto"])
-        assert "registered and compiled successfully" in result.output
+        assert "registered successfully" in result.output
+        
+        # 3.5 Build (now required manually)
+        runner.invoke(cli, ["build"])
         
         # Verify Registry
         data = registry.get_registry()
@@ -56,6 +59,9 @@ def test_cli_protos_flow_e2e(tmp_path):
         # 4. Deprecate Event
         result = runner.invoke(cli, ["deprecate-event", "test_user_event"])
         assert "deprecated successfully" in result.output
+        
+        # 4.5 Build again to apply deprecation
+        runner.invoke(cli, ["build"])
         data = registry.get_registry()
         assert data["events"]["test_user_event"]["deprecated"] is True
         

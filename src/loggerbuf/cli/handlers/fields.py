@@ -2,7 +2,8 @@ import os
 import glob
 import re
 import sys
-from loggerbuf.cli.handlers.protos import build, get_protos_dir
+import click
+from loggerbuf.cli.handlers.protos import get_protos_dir
 
 def _find_file_for_message(message_name: str, file_name: str = None) -> str:
     protos_dir = get_protos_dir()
@@ -75,8 +76,8 @@ def add_subfield(message_name: str, field_name: str, field_type: str, file_name:
     with open(target_file, "w") as f:
         f.writelines(lines)
         
-    print(f"Added field '{field_name}' (Tag {new_tag}) to '{message_name}' in {os.path.basename(target_file)}.")
-    build()
+    click.secho(f"Added field '{field_name}' (Tag {new_tag}) to '{message_name}' in {os.path.basename(target_file)}.", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")
 
 def deprecate_subfield(message_name: str, field_name: str, file_name: str = None):
     """Marks a specific field in a sub-message as deprecated."""
@@ -115,5 +116,5 @@ def deprecate_subfield(message_name: str, field_name: str, file_name: str = None
     with open(target_file, "w") as f:
         f.writelines(lines)
         
-    print(f"Marked field '{field_name}' in '{message_name}' as deprecated in {os.path.basename(target_file)}.")
-    build()
+    click.secho(f"Marked field '{field_name}' in '{message_name}' as deprecated in {os.path.basename(target_file)}.", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")

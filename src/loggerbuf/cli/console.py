@@ -185,7 +185,7 @@ def register_event(field_name, message_name, file):
     """
     try:
         protos.register_event(field_name, message_name, file)
-        click.secho(f"Event '{field_name}' registered and compiled successfully.", fg="green")
+        click.secho(f"Event '{field_name}' registered successfully.", fg="green")
         click.secho(
             f"\n[TIP] Consider adding specific sub-classifications (EventTypes) and statuses (EventStatus) "
             f"for your new event using 'loggerbuf event add-type' to enable deeper telemetry analytics.",

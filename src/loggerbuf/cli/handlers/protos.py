@@ -1,5 +1,6 @@
 import os
 import re
+import click
 import subprocess
 import glob
 from loggerbuf.cli.utils import registry
@@ -293,10 +294,10 @@ def register_event(field_name: str, message_name: str, file_name: str = None):
         raise FileNotFoundError(f"File '{file_name}' not found in {protos_dir}.")
         
     index = registry.register_event(field_name, message_name, file_name)
-    print(f"Successfully registered Event: {message_name} as '{field_name}' at index {index}.")
-    build()
+    click.secho(f"Successfully registered Event: {message_name} as '{field_name}' at index {index}.", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")
 
 def deprecate_event(field_name: str):
     registry.deprecate_event(field_name)
-    print(f"Deprecated event field {field_name}.")
-    build()
+    click.secho(f"Deprecated event field {field_name}.", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")

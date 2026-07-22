@@ -146,6 +146,7 @@ def add_type(name: str, statuses: List[str], reserve: int):
     _write_proto(proto_content)
     
     click.secho(f"Event type '{name}' and its statuses added successfully to registry.proto", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")
 
 def add_status(type_name: str, status_name: str):
     proto_content = _read_proto()
@@ -166,6 +167,7 @@ def add_status(type_name: str, status_name: str):
     _write_proto(proto_content)
     
     click.secho(f"Status '{st_name}' added successfully to registry.proto", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")
 
 def list_events(type_name: str = None):
     proto_content = _read_proto()
@@ -211,4 +213,5 @@ def add_counter_type(name: str, counters: List[str], reserve: int):
     _write_proto(proto_content)
     
     click.secho(f"Counter block '{name}' with {len(counter_names)} counters added successfully to registry.proto", fg="green")
+    click.secho("[i] Remember to run 'loggerbuf build' to apply these changes to your Python classes.", fg="yellow")
 
