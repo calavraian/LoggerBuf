@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "loggerbuf"
-version = "0.9.10"
+version = "0.9.11"
 description = "A powerful structured telemetry and debugging logger with Protobuf schemas"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -36,3 +36,6 @@ loggerbuf = "loggerbuf.cli.console:cli"
 packages = ["loggerbuf", "loggerbuf.cli", "loggerbuf.cli.handlers", "loggerbuf.cli.utils", "loggerbuf.data_logs"]
 package-dir = {"" = "src"}
 include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["*.proto"]

@@ -134,7 +134,11 @@ def add_type(name: str, statuses: List[str], reserve: int):
         
     for st in statuses:
         st_name = st.upper()
-        if not st_name.startswith(f"{prefix}_STATUS_"):
+        if st_name.startswith(f"{prefix}_STATUS_"):
+            pass
+        else:
+            if st_name.startswith("STATUS_"):
+                st_name = st_name[7:]
             st_name = f"{prefix}_STATUS_{st_name}"
         status_names.append(st_name)
         
@@ -151,7 +155,11 @@ def add_status(type_name: str, status_name: str):
         prefix = prefix[6:]
         
     st_name = status_name.upper()
-    if not st_name.startswith(f"{prefix}_STATUS_"):
+    if st_name.startswith(f"{prefix}_STATUS_"):
+        pass
+    else:
+        if st_name.startswith("STATUS_"):
+            st_name = st_name[7:]
         st_name = f"{prefix}_STATUS_{st_name}"
         
     proto_content = _add_status_to_block(proto_content, "EventStatus", prefix, st_name)

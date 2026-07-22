@@ -133,3 +133,35 @@ def test_events_cli_add_status_overflow(tmp_path, monkeypatch):
     result_fail = runner.invoke(cli, ['event', 'add-status', 'OVERFLOW', 'THREE'])
     assert result_fail.exit_code != 0
     assert "The reserved range for block 'OVERFLOW' is full" in str(result_fail.exception) or "The reserved range for block 'OVERFLOW' is full" in result_fail.output
+
+def test_events_cli_status_prefixing(tmp_path, monkeypatch):
+    runner = CliRunner()
+    
+    import shutil
+    import os
+    
+    real_proto_dir = "loggerbuf_schemas"
+    if not os.path.exists(real_proto_dir):
+        real_proto_dir = "src/loggerbuf/data_logs/protos"
+    test_proto_dir = tmp_path / "protos"
+    test_proto_dir.mkdir()
+    shutil.copy(os.path.join(real_proto_dir, "registry.proto"), test_proto_dir / "registry.proto")
+    
+    monkeypatch.setattr("loggerbuf.cli.handlers.protos.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.fields.get_protos_dir", lambda: str(test_proto_dir))
+    monkeypatch.setattr("loggerbuf.cli.handlers.events._get_registry_proto", lambda: str(test_proto_dir / "registry.proto"))
+    
+    # 1. Add type with raw status and STATUS_ prefixed status
+    runner.invoke(cli, ['event', 'add-type', 'DUMMY', '--statuses', 'RAW,STATUS_PREFIXED'])
+    
+    # 2. Add status with STATUS_ prefix
+    runner.invoke(cli, ['event', 'add-status', 'DUMMY', 'STATUS_LATER'])
+    
+    with open(test_proto_dir / "registry.proto", "r") as f:
+        content = f.read()
+        # They should all be neatly DUMMY_STATUS_...
+        assert "DUMMY_STATUS_RAW =" in content
+        assert "DUMMY_STATUS_PREFIXED =" in content
+        assert "DUMMY_STATUS_STATUS_PREFIXED" not in content
+        assert "DUMMY_STATUS_LATER =" in content
+        assert "DUMMY_STATUS_STATUS_LATER" not in content
