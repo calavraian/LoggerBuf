@@ -52,9 +52,9 @@ def _append_to_enum(proto_content: str, enum_name: str, block_name: str, items: 
         added_lines.append(f"    {item} = {next_val};")
         next_val += 1
         
-    end_range = next_val + reserve - 1
-    if end_range < next_val:
-        end_range = next_val
+    end_range = start_val + reserve - 1
+    if end_range < next_val - 1:
+        end_range = next_val - 1
         
     new_block += f"    // Range: {start_val}-{end_range}\n"
     new_block += f"    // Next value: {next_val}\n"
@@ -75,7 +75,7 @@ def _add_status_to_block(proto_content: str, enum_name: str, block_keyword: str,
     enum_body = match.group(2)
     enum_end = match.group(3)
     
-    block_pattern = re.compile(rf'(//.*?{block_keyword}.*?\n\s*//\s*Range:\s*\d+-\d+\n\s*//\s*Next value:\s*)(\d+)(\n(?:.*?\n)*?)', re.IGNORECASE)
+    block_pattern = re.compile(rf'(//.*?{block_keyword}.*?\n\s*//\s*Range:\s*\d+-(\d+)\n\s*//\s*Next value:\s*)(\d+)(\n(?:.*?\n)*?)', re.IGNORECASE)
     
     block_match = None
     for m in block_pattern.finditer(enum_body):
@@ -84,11 +84,15 @@ def _add_status_to_block(proto_content: str, enum_name: str, block_keyword: str,
     if not block_match:
         raise ValueError(f"Could not find reservation block for '{block_keyword}' in {enum_name}. Make sure it was created via CLI.")
     
-    next_val = int(block_match.group(2))
+    end_limit = int(block_match.group(2))
+    next_val = int(block_match.group(3))
     
-    prefix = enum_body[:block_match.start(2)]
+    if next_val > end_limit:
+        raise ValueError(f"The reserved range for block '{block_keyword}' is full (Max value: {end_limit}). Please increase the range manually in registry.proto if safe, or create a new block.")
+    
+    prefix = enum_body[:block_match.start(3)]
     updated_next_val = str(next_val + 1)
-    suffix = enum_body[block_match.end(2):]
+    suffix = enum_body[block_match.end(3):]
     
     lines = suffix.split('\n')
     insert_idx = 0

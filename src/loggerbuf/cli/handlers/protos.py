@@ -104,33 +104,32 @@ def init(demo=False):
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     source_protos = os.path.join(base_dir, "data_logs", "protos")
     
-    if os.path.exists(protos_dir) and os.listdir(protos_dir):
-        # We don't overwrite if it already exists
-        pass
-    else:
-        os.makedirs(protos_dir, exist_ok=True)
-        # Copy base schemas
-        files_to_copy = ["registry.proto", "main_data.proto"]
-        if demo:
-            files_to_copy.append("demo_event.proto")
-            
-        for filename in files_to_copy:
-            src = os.path.join(source_protos, filename)
-            dst = os.path.join(protos_dir, filename)
-            if os.path.exists(src):
-                if not demo and filename == "registry.proto":
-                    with open(src, "r") as f:
-                        content = f.read()
-                    
-                    # Strip specific demo statuses
-                    content = re.sub(r'\s*// Specific statuses for the demo user event.*?DEMO_EVENT_STATUS_FAILED = 53;', '', content, flags=re.DOTALL)
-                    # Strip specific demo event types
-                    content = re.sub(r'\s*// Specific event types for the demo user event.*?DEMO_EVENT_DATA_STORED = 105;', '', content, flags=re.DOTALL)
-                    
-                    with open(dst, "w") as f:
-                        f.write(content)
-                else:
-                    shutil.copy(src, protos_dir)
+    os.makedirs(protos_dir, exist_ok=True)
+    
+    # Copy base schemas
+    files_to_copy = ["registry.proto", "main_data.proto"]
+    if demo:
+        files_to_copy.append("demo_event.proto")
+        
+    for filename in files_to_copy:
+        src = os.path.join(source_protos, filename)
+        dst = os.path.join(protos_dir, filename)
+        
+        # Only copy if the file does not already exist
+        if os.path.exists(src) and not os.path.exists(dst):
+            if not demo and filename == "registry.proto":
+                with open(src, "r") as f:
+                    content = f.read()
+                
+                # Strip specific demo statuses
+                content = re.sub(r'\s*// Specific statuses for the demo user event.*?DEMO_EVENT_STATUS_FAILED = 53;', '', content, flags=re.DOTALL)
+                # Strip specific demo event types
+                content = re.sub(r'\s*// Specific event types for the demo user event.*?DEMO_EVENT_DATA_STORED = 105;', '', content, flags=re.DOTALL)
+                
+                with open(dst, "w") as f:
+                    f.write(content)
+            else:
+                shutil.copy(src, protos_dir)
                 
     registry.init_registry()
 
