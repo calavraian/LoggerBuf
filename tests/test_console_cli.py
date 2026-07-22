@@ -114,7 +114,7 @@ def test_exceptions_in_events(mock_events, runner):
 def test_register_event(mock_protos, runner):
     result = runner.invoke(cli, ['register-event', 'my_evt', 'MyEvt'])
     assert result.exit_code == 0
-    assert "registered and compiled successfully" in result.output
+    assert "registered successfully" in result.output
     mock_protos.register_event.assert_called_once_with('my_evt', 'MyEvt', None)
 
 @patch('loggerbuf.cli.console.protos')

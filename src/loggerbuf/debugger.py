@@ -272,15 +272,6 @@ class DebuggerLog:
                 elif queue_strategy_val == "LOSSY":
                     queue_strategy = QueueStrategy.LOSSY
                 
-                full_path_logs = self.__full_path_logs()
-                debug_log_file = os.path.join(full_path_logs, f"{config_manager.get(ConfigKey.LOGGING_DEBUG_FILE_NAME)}_{name}.log")
-
-                # Consolidated to single file
-                log_level_str = config_manager.get(ConfigKey.LOG_LEVEL, 'DEBUG')
-                print("DEBUG: log_level_str in init is", log_level_str)
-                initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
-                
-                debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
                 stream_handler = self.__create_stream_handler()
 
                 # Initialize console filter based on settings
@@ -291,6 +282,14 @@ class DebuggerLog:
                 
                 dest_handlers = []
                 if dest in (LogDestination.FILE_LIVE, LogDestination.FILE_HISTORY, LogDestination.CONSOLE_AND_FILE_LIVE, LogDestination.CONSOLE_AND_FILE_HISTORY):
+                    full_path_logs = self.__full_path_logs()
+                    debug_log_file = os.path.join(full_path_logs, f"{config_manager.get(ConfigKey.LOGGING_DEBUG_FILE_NAME)}_{name}.log")
+
+                    # Consolidated to single file
+                    log_level_str = config_manager.get(ConfigKey.LOG_LEVEL, 'DEBUG')
+                    initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
+                    
+                    debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
                     dest_handlers.append(debug_handler)
 
                 # Always add stream_handler, output is controlled by ConsoleFilter
