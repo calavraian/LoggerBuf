@@ -290,11 +290,15 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf config set <key> <value>` | Actualiza la configuración global. Ejemplo: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Consulta un valor de configuración global, o imprime grupos enteros formateados pasando `all`, `logging`, `telemetry` o `metrics`. |
 | `loggerbuf config reset <key>` | Restaura una clave de configuración a su valor predeterminado global. |
+| `loggerbuf filter status` | Muestra el estado activo de los filtros de clases, niveles y metadatos. |
+| `loggerbuf filter add` | Agrega restricciones a las clases o niveles, u oculta metadatos con `--hide-metadata` o `--hide-console-metadata`. |
+| `loggerbuf filter remove` | Elimina restricciones de clases/niveles o restaura metadatos ocultos con `--show-metadata` o `--show-console-metadata`. |
+| `loggerbuf filter reset` | Restaura filtros específicos (ej. `--classes`, `--metadata`) o todos (`--all`) a sus valores por defecto. |
 | `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
 | `loggerbuf add-counter-type <Type>` | Agrega un nuevo tipo de contador a tu `registry.proto`. Soporta rangos: `--start` y `--end`. |
-| `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`). |
+| `loggerbuf decode-debug <File>`| Explora logs de debug históricos visualmente (soporta `--grep`, `--head`, `--tail`, `--format [visual|jsonl|pretty]`, `--output <file>`). |
 | `loggerbuf agents sync` | Descarga o actualiza el archivo SKILL.md oficial para agentes de IA sin recompilar esquemas. |
 
 ### Ejemplos Potentes del CLI

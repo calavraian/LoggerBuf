@@ -79,7 +79,8 @@ This creates the required `loggerbuf_schemas` directory and global configs.
 * `loggerbuf event add-status <event_name> <status_name>`: Adds a standardized Status enum to an event block. (Note: You must run `loggerbuf build` afterwards for the changes to apply). **IMPORTANT**: If this command fails with a `ValueError` indicating that the reserved range is full, you MUST create a new block (e.g. `EVENT_NAME_PART_2`) or, only if you are absolutely sure it is safe and there are no overlapping blocks below it, manually expand the `Range: X-Y` upper limit in `registry.proto`. Note: Do not prefix the status name with `STATUS_` (e.g. use `SUCCESS` instead of `STATUS_SUCCESS`); the CLI handles prefixing.
 * `loggerbuf counter add-type <name> [--reserve X]`: Adds a new counter block for high-frequency metrics.
 * `loggerbuf decode <file.bin>`: Decodes a binary telemetry log file to standard output (JSON-like).
-* `loggerbuf decode-debug <file.log>`: Interactively decodes specific lines from a text debug log.
+* `loggerbuf decode-debug <file.log>`: Interactively decodes specific lines from a text debug log (supports `--grep`, `--head`, `--tail`, `--format [visual|jsonl|pretty]`, `--output <file>`).
+* `loggerbuf filter status|add|remove|reset`: Manages dynamic filters for classes, levels, and metadata fields without needing to restart the application (hot-reloaded).
 * `loggerbuf stress-test`: Runs a concurrency benchmark.
 * `loggerbuf agents sync`: Downloads or updates the official LoggerBuf agent SKILL.md without recompiling schemas.
 * `loggerbuf config init`: Generates a `loggerbuf.json` configuration file (already done if you used `loggerbuf init`).

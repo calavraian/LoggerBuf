@@ -307,10 +307,14 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf config set <key> <value>` | Safely updates global settings. Example: `loggerbuf config set LOG_LEVEL DEBUG` |
 | `loggerbuf config get <key>` | Retrieves the active value for a key, or prints grouped configurations if you pass `all`, `logging`, `telemetry`, or `metrics`. |
 | `loggerbuf config reset <key>` | Resets a configuration key to its global default value. |
+| `loggerbuf filter status` | Shows the active status for class, level, and metadata filters. |
+| `loggerbuf filter add` | Adds filters to `LOGGING_CONSOLE_ALLOWED_CLASSES`/`LEVELS` or hides fields from metadata using `--hide-metadata` or `--hide-console-metadata`. |
+| `loggerbuf filter remove` | Removes filters or restores hidden metadata fields using `--show-metadata` or `--show-console-metadata`. |
+| `loggerbuf filter reset` | Resets specific filters (e.g. `--classes`, `--metadata`) or all of them (`--all`) to their defaults. |
 | `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf add-counter-type <Type>` | Adds a new counter type to your `registry.proto`. Supports ranges via `--start` and `--end`. |
-| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
+| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`, `--format [visual|jsonl|pretty]`, `--output <file>`). |
 | `loggerbuf agents sync` | Downloads or updates the official LoggerBuf agent SKILL.md without recompiling schemas. |
 
 ### Powerful CLI Examples
@@ -350,7 +354,6 @@ loggerbuf event add-status NETWORK TIMEOUT
 loggerbuf event list
 ```
 *Don't forget to run `loggerbuf build` to compile the changes made by these commands!*
-| `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`). |
 
 ### 🏗️ Stress Testing & Resource Monitoring
 LoggerBuf includes a built-in concurrent stress testing suite designed to evaluate system performance under extreme logging loads. This command evaluates both disk throughput and queue stability, simulating real-world scenarios.
