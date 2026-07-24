@@ -153,7 +153,7 @@ def test_decode_logs_head_tail_conflict(mock_run_decode, runner):
 def test_decode_debug(mock_run_decode_debug, runner):
     result = runner.invoke(cli, ['decode-debug', 'file.log'])
     assert result.exit_code == 0
-    mock_run_decode_debug.assert_called_once_with('file.log', None, None, None)
+    mock_run_decode_debug.assert_called_once_with('file.log', None, None, None, None, 'visual')
 
 @patch('loggerbuf.cli.console.stress')
 def test_stress_test(mock_stress, runner):
@@ -265,3 +265,42 @@ def test_event_commands(mock_events, runner):
     result = runner.invoke(cli, ['event', 'list', 'NET'])
     assert result.exit_code == 0
     mock_events.list_events.assert_called_once_with('NET')
+
+@patch('loggerbuf.cli.handlers.filter.ConfigManager')
+def test_filter_add_remove_reset(mock_cm_class, runner):
+    mock_cm = MagicMock()
+    mock_cm_class.return_value = mock_cm
+    mock_cm.get.return_value = []
+    
+    result = runner.invoke(cli, ['filter', 'add', '--class', 'MyClass'])
+    assert result.exit_code == 0
+    assert "Added 'MyClass'" in result.output
+    mock_cm.set.assert_called_with('LOGGING_CONSOLE_ALLOWED_CLASSES', ['MyClass'])
+    
+    mock_cm.get.return_value = ['MyClass']
+    result = runner.invoke(cli, ['filter', 'remove', '--class', 'MyClass'])
+    assert result.exit_code == 0
+    assert "Removed 'MyClass'" in result.output
+    mock_cm.set.assert_called_with('LOGGING_CONSOLE_ALLOWED_CLASSES', [])
+    
+    result = runner.invoke(cli, ['filter', 'reset', '--classes'])
+    assert result.exit_code == 0
+    mock_cm.set.assert_called_with('LOGGING_CONSOLE_ALLOWED_CLASSES', [])
+
+@patch('loggerbuf.cli.handlers.filter.ConfigManager')
+def test_filter_status(mock_cm_class, runner):
+    mock_cm = MagicMock()
+    mock_cm_class.return_value = mock_cm
+    # Empty filters return [] for classes and levels, and full default lists for metadata
+    def side_effect(key, default=None):
+        if key in ('LOGGING_CONSOLE_ALLOWED_CLASSES', 'LOGGING_CONSOLE_ALLOWED_LEVELS'):
+            return []
+        else:
+            return default
+    mock_cm.get.side_effect = side_effect
+    
+    result = runner.invoke(cli, ['filter', 'status'])
+    assert result.exit_code == 0
+    assert "[OFF]" in result.output
+    assert "[ACTIVE]" not in result.output
+

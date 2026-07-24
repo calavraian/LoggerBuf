@@ -103,5 +103,77 @@ class TestDecodeDebug(unittest.TestCase):
         self.assertNotIn("First message", output)
         self.assertIn("Failed to connect", output)
 
-if __name__ == "__main__":
+    def test_run_decode_debug_format_jsonl(self):
+        old_stdout = sys.stdout
+        sys.stdout = captured = StringIO()
+        try:
+            run_decode_debug(self.test_log_file, format_style="jsonl")
+        finally:
+            sys.stdout = old_stdout
+            
+        output = captured.getvalue()
+        # Should be exact json lines
+        self.assertIn('"message": "First message"', output)
+        self.assertTrue(output.startswith('{"timestamp"'))
+        
+    def test_run_decode_debug_format_pretty(self):
+        old_stdout = sys.stdout
+        sys.stdout = captured = StringIO()
+        try:
+            run_decode_debug(self.test_log_file, format_style="pretty")
+        finally:
+            sys.stdout = old_stdout
+            
+        output = captured.getvalue()
+        # Should have pretty indentation
+        self.assertIn('  "message": "First message"', output)
+        self.assertIn('{\n  "timestamp"', output)
+        
+    def test_run_decode_debug_output_file(self):
+        output_file = os.path.join(self.temp_dir.name, "output.txt")
+        run_decode_debug(self.test_log_file, output_file=output_file)
+        
+        self.assertTrue(os.path.exists(output_file))
+        with open(output_file, "r", encoding="utf-8") as f:
+            content = f.read()
+            self.assertIn("First message", content)
+            self.assertIn("Failed to connect", content)
+
+    def test_run_decode_debug_filtered_warning(self):
+        # Create a log file with a missing required field (e.g., 'file')
+        filtered_log_file = os.path.join(self.temp_dir.name, "debug_filtered.log")
+        filtered_entries = [
+            {"timestamp": "2026-06-11 10:00:00,000", "logger": "TEST_APP", "level": "INFO", "class": "None", "function": "main", "line": 10, "message": "Msg 1"},
+            {"timestamp": "2026-06-11 10:00:01,000", "logger": "TEST_APP", "level": "ERROR", "file": "test.py", "class": "MyClass", "function": "do_work", "line": 20, "message": "Msg 2"}
+        ]
+        
+        with open(filtered_log_file, "w", encoding="utf-8") as f:
+            for entry in filtered_entries:
+                f.write(json.dumps(entry) + "\n")
+                
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        sys.stdout = captured_stdout = StringIO()
+        sys.stderr = captured_stderr = StringIO()
+        
+        try:
+            run_decode_debug(filtered_log_file)
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            
+        out = captured_stdout.getvalue()
+        err = captured_stderr.getvalue()
+        
+        # Check that warning is printed to stderr exactly once
+        self.assertIn("Lines with filtered metadata detected in this file", err)
+        self.assertEqual(err.count("Lines with filtered metadata detected in this file"), 1)
+        
+        # Check that the first line (missing 'file') has the *F* prefix
+        self.assertIn("\033[95m*F*\033[0m [2026-06-11 10:00:00,000]", out)
+        # Check that the second line (complete) DOES NOT have the *F* prefix
+        self.assertIn("[2026-06-11 10:00:01,000]", out)
+        self.assertNotIn("\033[95m*F*\033[0m [2026-06-11 10:00:01,000]", out)
+
+if __name__ == '__main__':
     unittest.main()
