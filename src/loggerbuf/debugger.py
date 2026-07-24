@@ -289,7 +289,11 @@ class DebuggerLog:
                     log_level_str = config_manager.get(ConfigKey.LOG_LEVEL, 'DEBUG')
                     initial_level = getattr(logging, log_level_str.upper(), logging.DEBUG)
                     
-                    debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
+                    if dest in (LogDestination.FILE_HISTORY, LogDestination.CONSOLE_AND_FILE_HISTORY):
+                        debug_handler = self.__create_size_time_rotating_handler(filename=debug_log_file, logLevel=initial_level)
+                    else:
+                        debug_handler = self.__create_file_handler(filename=debug_log_file, logLevel=initial_level)
+                        
                     dest_handlers.append(debug_handler)
 
                 # Always add stream_handler, output is controlled by ConsoleFilter
@@ -332,7 +336,19 @@ class DebuggerLog:
 
 
     def __get_log_format(self, fields):
+        from .config import ConfigManager, ConfigKey, LogMetadata
+        config_mgr = ConfigManager()
+        
+        allowed_classes = config_mgr.get(ConfigKey.LOGGING_CONSOLE_ALLOWED_CLASSES, [])
+        allowed_levels = config_mgr.get(ConfigKey.LOGGING_CONSOLE_ALLOWED_LEVELS, [])
+        default_meta = [e.value for e in LogMetadata]
+        
+        has_filters = bool(allowed_classes) or bool(allowed_levels) or len(fields) < len(default_meta)
+        
         parts = []
+        if has_filters:
+            parts.append('\033[95m*F*\033[0m')
+            
         if LogMetadata.TIMESTAMP.value in fields:
             parts.append('[{asctime}]')
         
@@ -379,7 +395,7 @@ class DebuggerLog:
         if name in DebuggerLog.__listeners:
             listener = DebuggerLog.__listeners[name]
             for handler in listener.handlers:
-                is_json = isinstance(handler, SizedTimedRotatingFileHandler)
+                is_json = isinstance(handler, logging.FileHandler)
                 if is_json:
                     self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
 
@@ -388,7 +404,7 @@ class DebuggerLog:
         if name in DebuggerLog.__listeners:
             listener = DebuggerLog.__listeners[name]
             for handler in listener.handlers:
-                is_json = isinstance(handler, SizedTimedRotatingFileHandler)
+                is_json = isinstance(handler, logging.FileHandler)
                 if not is_json:
                     self.__config_handler(handler, handler.level, rotator=is_json, is_json=is_json)
 
@@ -404,7 +420,7 @@ class DebuggerLog:
         if name in DebuggerLog.__listeners:
             listener = DebuggerLog.__listeners[name]
             for handler in listener.handlers:
-                if isinstance(handler, SizedTimedRotatingFileHandler):
+                if isinstance(handler, logging.FileHandler):
                     handler.setLevel(new_level)
 
     def enable_console(self, allowed_classes: list = None, allowed_levels: list = None):
@@ -470,6 +486,10 @@ class DebuggerLog:
         config = ConfigManager()
         handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=config.get('LOGGING_BACKUP_COUNT'), maxBytes=self.__settings.get_file_size())
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True, is_json=True)
+
+    def __create_file_handler(self, filename: str, logLevel):
+        handler = TruncatingFileHandler(filename=filename, maxBytes=self.__settings.get_file_size())
+        return self.__config_handler(handler=handler, logLevel=logLevel, rotator=False, is_json=True)
 
     def __create_stream_handler(self):
         handler = logging.StreamHandler()
@@ -634,3 +654,12 @@ class SizedTimedRotatingFileHandler(RotatingFileHandler):
              self.rollover = RolloverType.SIZE
         
         return rollover
+
+class TruncatingFileHandler(RotatingFileHandler):
+    def __init__(self, filename, maxBytes=0, encoding=None, delay=False):
+        super().__init__(filename, mode='a', maxBytes=maxBytes, backupCount=0, encoding=encoding, delay=delay)
+        
+    def doRollover(self):
+        if self.stream:
+            self.stream.seek(0)
+            self.stream.truncate()

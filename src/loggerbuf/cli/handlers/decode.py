@@ -194,7 +194,7 @@ def decode_debug_file(filepath):
                     sys.exit(1)
                 print(f"Warning: Failed to decode JSON at {filepath}:{line_num}: {e}", file=sys.stderr)
 
-def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None, tail: int = None):
+def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None, tail: int = None, output_file: str = None, format_style: str = "visual"):
     # Warning if it is the base file without rotation ext
     basename = os.path.basename(input_file)
     if basename.endswith(".log") and not re.search(r'\d{4}-\d{2}-\d{2}', basename):
@@ -209,6 +209,7 @@ def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None
 
     total_logs = 0
     matched_logs = 0
+    warning_impreso = False
     
     grep_lower = grep_keyword.lower() if grep_keyword else None
 
@@ -216,6 +217,7 @@ def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None
         log_generator = collections.deque(log_generator, maxlen=tail)
 
     # Original visual format: '[{asctime}] >>{name}<< ({filename}::{caller_class}::{funcName}->{lineno}) - *{levelname}* - message::>{message}'
+    out_f = open(output_file, "w") if output_file else sys.stdout
     try:
         for log_obj in log_generator:
             if head is not None and matched_logs >= head:
@@ -223,27 +225,55 @@ def run_decode_debug(input_file: str, grep_keyword: str = None, head: int = None
                 
             total_logs += 1
             
-            timestamp = log_obj.get("timestamp", "Unknown")
-            logger_name = log_obj.get("logger", "Unknown")
-            filename = log_obj.get("file", "Unknown")
-            caller_class = log_obj.get("class", "None")
-            func_name = log_obj.get("function", "Unknown")
-            lineno = log_obj.get("line", 0)
-            level = log_obj.get("level", "UNKNOWN")
+            timestamp = log_obj.get("timestamp")
+            logger_name = log_obj.get("logger")
+            filename = log_obj.get("file")
+            caller_class = log_obj.get("class")
+            func_name = log_obj.get("function")
+            lineno = log_obj.get("line")
+            level = log_obj.get("level")
             message = log_obj.get("message", "")
             
+            # Check if any standard metadata is missing
+            is_filtered = False
+            if any(x is None for x in (timestamp, logger_name, filename, caller_class, func_name, lineno, level)):
+                is_filtered = True
+                
+            if is_filtered and not warning_impreso:
+                print("\033[93m⚠️ [WARNING]: Lines with filtered metadata detected in this file. They will be marked with *F*.\033[0m", file=sys.stderr)
+                warning_impreso = True
+                
+            # Fallbacks for formatting
+            timestamp = timestamp or "Unknown"
+            logger_name = logger_name or "Unknown"
+            filename = filename or "Unknown"
+            caller_class = caller_class or "None"
+            func_name = func_name or "Unknown"
+            lineno = lineno or 0
+            level = level or "UNKNOWN"
+
             formatted_msg = f"[{timestamp}] >>{logger_name}<< ({filename}::{caller_class}::{func_name}->{lineno}) - *{level}* - message::>{message}"
+            if is_filtered:
+                formatted_msg = f"\033[95m*F*\033[0m {formatted_msg}"
             
             if grep_lower:
-                if grep_lower not in formatted_msg.lower():
+                if grep_lower not in formatted_msg.lower() and grep_lower not in json.dumps(log_obj).lower():
                     continue
             
             matched_logs += 1
-            print(formatted_msg)
+            
+            if format_style == "visual":
+                print(formatted_msg, file=out_f)
+            elif format_style == "jsonl":
+                out_f.write(json.dumps(log_obj, ensure_ascii=False) + "\n")
+            elif format_style == "pretty":
+                out_f.write(json.dumps(log_obj, indent=2, ensure_ascii=False) + "\n")
             
     except Exception as e:
         print(f"Error decoding debug logs: {e}", file=sys.stderr)
     finally:
-        if grep_keyword:
-            print(f"--- Filtered {matched_logs} matches out of {total_logs} total logs in {input_file} ---", file=sys.stderr)
+        if output_file:
+            out_f.close()
+        if grep_keyword or output_file:
+            print(f"--- Processed {matched_logs} matches out of {total_logs} total logs in {input_file} ---", file=sys.stderr)
 
