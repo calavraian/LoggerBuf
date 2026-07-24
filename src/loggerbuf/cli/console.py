@@ -7,7 +7,8 @@ from loggerbuf.cli.handlers import stress
 from loggerbuf.cli.handlers import fields
 from loggerbuf.cli.handlers import events
 from loggerbuf.cli.handlers import agents as agents_handler
-from ..config import ConfigManager
+from loggerbuf.cli.handlers import filter as filter_handler
+from ..config import ConfigManager, ConfigKey, LogMetadata
 
 @click.group()
 def cli():
@@ -264,9 +265,11 @@ def decode(input_file, output, format, stats, head, tail, verify, skip_integrity
 @click.option('--grep', help="Filter logs by keyword (case-insensitive).")
 @click.option('--head', type=int, help="Show only the first N logs.")
 @click.option('--tail', type=int, help="Show only the last N logs.")
-def decode_debug(input_file, grep, head, tail):
+@click.option('--output', '-o', default=None, help="Output file (prints to stdout if not provided)")
+@click.option('--format', type=click.Choice(['jsonl', 'pretty', 'visual']), default='visual', help="Output format. 'visual' (default) is human-readable.")
+def decode_debug(input_file, grep, head, tail, output, format):
     """Explores historical JSON debug logs visually in the terminal."""
-    decode_handler.run_decode_debug(input_file, grep, head, tail)
+    decode_handler.run_decode_debug(input_file, grep, head, tail, output, format)
 
 @cli.group()
 def event():
@@ -451,6 +454,45 @@ def get(key):
         click.echo("")
     else:
         click.secho(f"Key '{key}' not found in config or defaults.", fg="red")
+
+@cli.group()
+def filter():
+    """Manages dynamic filters (Classes, Levels, Metadata)"""
+    pass
+
+@filter.command()
+def status():
+    """Shows the current status of all filters."""
+    filter_handler.run_status()
+
+@filter.command()
+@click.option('--class', 'cls', help="Add a class to the allowed console list.")
+@click.option('--level', help="Add a log level to the allowed console list.")
+@click.option('--hide-metadata', type=click.Choice([e.value for e in LogMetadata], case_sensitive=False), help="Hide a field from file metadata.")
+@click.option('--hide-console-metadata', type=click.Choice([e.value for e in LogMetadata], case_sensitive=False), help="Hide a field from console metadata.")
+def add(cls, level, hide_metadata, hide_console_metadata):
+    """Adds restrictions (classes/levels) or hides metadata."""
+    filter_handler.run_add(cls, level, hide_metadata, hide_console_metadata)
+
+@filter.command()
+@click.option('--class', 'cls', help="Remove a class from the allowed console list.")
+@click.option('--level', help="Remove a log level from the allowed console list.")
+@click.option('--show-metadata', type=click.Choice([e.value for e in LogMetadata], case_sensitive=False), help="Restore a hidden field to file metadata.")
+@click.option('--show-console-metadata', type=click.Choice([e.value for e in LogMetadata], case_sensitive=False), help="Restore a hidden field to console metadata.")
+def remove(cls, level, show_metadata, show_console_metadata):
+    """Removes restrictions or restores hidden metadata."""
+    filter_handler.run_remove(cls, level, show_metadata, show_console_metadata)
+
+@filter.command()
+@click.option('--classes', is_flag=True, help="Reset classes filter (allow all).")
+@click.option('--levels', is_flag=True, help="Reset levels filter (allow all).")
+@click.option('--metadata', is_flag=True, help="Reset file metadata to defaults.")
+@click.option('--console-metadata', is_flag=True, help="Reset console metadata to defaults.")
+@click.option('--all', is_flag=True, help="Reset all filters and metadata to defaults.")
+def reset(classes, levels, metadata, console_metadata, all):
+    """Resets specific filters or all of them."""
+    filter_handler.run_reset(classes, levels, metadata, console_metadata, all)
+
 
 @cli.command()
 @click.option('--threads', type=int, help="Number of concurrent threads. Overrides config.")
