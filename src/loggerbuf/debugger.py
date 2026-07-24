@@ -484,11 +484,11 @@ class DebuggerLog:
 
     def __create_size_time_rotating_handler(self, filename: str, logLevel):
         config = ConfigManager()
-        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=config.get('LOGGING_BACKUP_COUNT'), maxBytes=self.__settings.get_file_size())
+        handler = SizedTimedRotatingFileHandler(filename=filename, backupCount=config.get('LOGGING_BACKUP_COUNT'), maxBytes=self.__settings.get_file_size(), delay=True)
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=True, is_json=True)
 
     def __create_file_handler(self, filename: str, logLevel):
-        handler = TruncatingFileHandler(filename=filename, maxBytes=self.__settings.get_file_size())
+        handler = TruncatingFileHandler(filename=filename, maxBytes=self.__settings.get_file_size(), delay=True)
         return self.__config_handler(handler=handler, logLevel=logLevel, rotator=False, is_json=True)
 
     def __create_stream_handler(self):
