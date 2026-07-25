@@ -98,6 +98,11 @@ def decode_file(filepath, verify_key=None, skip_integrity=False, is_counter=Fals
 def run_decode(input_file: str, output_file: str, format: str, stats: bool, head: int, tail: int, verify_key: str = None, skip_integrity: bool = False, is_counter: bool = False):
     """Main decoding logic separated from click."""
     
+    if verify_key == 'PROMPT':
+        import click
+        verify_key = click.prompt('HMAC Secret Key', hide_input=True)
+
+    
     try:
         event_generator = decode_file(input_file, verify_key, skip_integrity, is_counter)
     except Exception as e:

@@ -148,6 +148,22 @@ def test_decode_logs(mock_run_decode, runner):
     mock_run_decode.assert_called_once()
 
 @patch('loggerbuf.cli.console.decode_handler.run_decode')
+def test_decode_logs_verify_prompt(mock_run_decode, runner):
+    result = runner.invoke(cli, ['decode', 'file.bin', '--verify'])
+    assert result.exit_code == 0
+    mock_run_decode.assert_called_once()
+    assert mock_run_decode.call_args.kwargs.get('verify_key') == 'PROMPT'
+
+@patch('click.prompt')
+@patch('loggerbuf.cli.handlers.decode.decode_file')
+def test_run_decode_interactive_prompt(mock_decode_file, mock_prompt):
+    mock_prompt.return_value = 'my_secret_key'
+    from loggerbuf.cli.handlers.decode import run_decode
+    run_decode('dummy.log', None, 'pretty', False, 0, 0, verify_key='PROMPT')
+    mock_prompt.assert_called_once_with('HMAC Secret Key', hide_input=True)
+    mock_decode_file.assert_called_once_with('dummy.log', 'my_secret_key', False, False)
+
+@patch('loggerbuf.cli.console.decode_handler.run_decode')
 def test_decode_logs_head_tail_conflict(mock_run_decode, runner):
     result = runner.invoke(cli, ['decode', 'file.bin', '--head', '10', '--tail', '10'])
     assert result.exit_code == 1

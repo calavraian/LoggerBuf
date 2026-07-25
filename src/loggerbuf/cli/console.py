@@ -240,7 +240,7 @@ def deprecate_subfield(message_name, field_name, file):
 @click.option('--stats', is_flag=True, help="Show summary statistics instead of full logs")
 @click.option('--head', type=int, help="Output the first N events")
 @click.option('--tail', type=int, help="Output the last N events")
-@click.option('--verify', help="HMAC secret key to verify the integrity of the log file")
+@click.option('--verify', is_flag=False, flag_value='PROMPT', default=None, help="HMAC secret key to verify the integrity of the log file. Use without value to prompt securely.")
 @click.option('--skip-integrity', is_flag=True, help="Skip HMAC integrity checks even if records contain signatures")
 @click.option('--counters', is_flag=True, help="Decode file as CounterEvents instead of standard Events")
 def decode(input_file, output, format, stats, head, tail, verify, skip_integrity, counters):
