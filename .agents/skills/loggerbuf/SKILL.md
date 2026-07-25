@@ -69,6 +69,7 @@ loggerbuf init --demo
 This creates the required `loggerbuf_schemas` directory and global configs.
 
 ### Complete CLI Command List
+* `loggerbuf --version`: Displays the installed version of LoggerBuf.
 * `loggerbuf init [--demo]`: Initializes the project directory and schemas. Use `--demo` to include demo events.
 * `loggerbuf build`: Compiles the schema (`main_data.proto`) into Python classes. Run this after ANY modification to the schema.
 * `loggerbuf create-event <event_name> --field <name>:<type>`: Creates a new event block. Use `--field` multiple times for non-interactive mode.
@@ -78,7 +79,7 @@ This creates the required `loggerbuf_schemas` directory and global configs.
 * `loggerbuf event add-type <event_name> [--reserve X]`: Adds a new type and standard statuses. The `--reserve` flag defines the **total** size of the block, including the items specified in the command (e.g. `--reserve 50` creates a block of 50 total slots). Note: You must run `loggerbuf build` afterwards for the changes to apply. Note: When defining statuses, use pure names (e.g. `SUCCESS`); the CLI automatically prepends the `STATUS_` prefix for you.
 * `loggerbuf event add-status <event_name> <status_name>`: Adds a standardized Status enum to an event block. (Note: You must run `loggerbuf build` afterwards for the changes to apply). **IMPORTANT**: If this command fails with a `ValueError` indicating that the reserved range is full, you MUST create a new block (e.g. `EVENT_NAME_PART_2`) or, only if you are absolutely sure it is safe and there are no overlapping blocks below it, manually expand the `Range: X-Y` upper limit in `registry.proto`. Note: Do not prefix the status name with `STATUS_` (e.g. use `SUCCESS` instead of `STATUS_SUCCESS`); the CLI handles prefixing.
 * `loggerbuf counter add-type <name> [--reserve X]`: Adds a new counter block for high-frequency metrics.
-* `loggerbuf decode <file.bin>`: Decodes a binary telemetry log file to standard output (JSON-like).
+* `loggerbuf decode <file.bin> [--verify]`: Decodes a binary telemetry log file to standard output (JSON-like). Use `--verify` for interactive secure HMAC verification, or `--verify "KEY"` for explicit verification.
 * `loggerbuf decode-debug <file.log>`: Interactively decodes specific lines from a text debug log (supports `--grep`, `--head`, `--tail`, `--format [visual|jsonl|pretty]`, `--output <file>`).
 * `loggerbuf filter status|add|remove|reset`: Manages dynamic filters for classes, levels, and metadata fields without needing to restart the application (hot-reloaded).
 * `loggerbuf stress-test`: Runs a concurrency benchmark.

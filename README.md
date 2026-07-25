@@ -299,6 +299,7 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 
 | Command | Description |
 |---|---|
+| `loggerbuf --version` | Displays the currently installed version of LoggerBuf. |
 | `loggerbuf init` | Master command that initializes configuration and schemas at once. |
 | `loggerbuf config init` | Generates the default `loggerbuf.json` configuration file. |
 | `loggerbuf protos init` | Initializes the `loggerbuf_schemas/` directory with base schemas (does not compile). |
@@ -311,7 +312,7 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 | `loggerbuf filter add` | Adds filters to `LOGGING_CONSOLE_ALLOWED_CLASSES`/`LEVELS` or hides fields from metadata using `--hide-metadata` or `--hide-console-metadata`. |
 | `loggerbuf filter remove` | Removes filters or restores hidden metadata fields using `--show-metadata` or `--show-console-metadata`. |
 | `loggerbuf filter reset` | Resets specific filters (e.g. `--classes`, `--metadata`) or all of them (`--all`) to their defaults. |
-| `loggerbuf decode-logs <File>` | Decodes binary telemetry logs to Terminal or JSONL. |
+| `loggerbuf decode <File>` | Decodes binary telemetry logs to Terminal or JSONL. Supports `--verify` (see examples). |
 | `loggerbuf event add-type <Name>` | Adds a new sub-classification `EventType` to your project. |
 | `loggerbuf add-counter-type <Type>` | Adds a new counter type to your `registry.proto`. Supports ranges via `--start` and `--end`. |
 | `loggerbuf decode-debug <File>` | Explores historical JSON debug logs visually (supports `--grep`, `--head`, `--tail`, `--format [visual|jsonl|pretty]`, `--output <file>`). |
@@ -323,10 +324,17 @@ The LoggerBuf CLI (`loggerbuf`) is the **first-class citizen** for managing your
 Extract thousands of binary events into readable JSON for analysis.
 ```bash
 # Output binary telemetry data as human-readable JSON
-loggerbuf decode-logs logs/telemetry_queue.bin
+loggerbuf decode logs/telemetry_queue.bin
 
 # Decode directly to a JSONL file for database ingestion
-loggerbuf decode-logs logs/telemetry_queue.bin --out output.jsonl
+loggerbuf decode logs/telemetry_queue.bin --out output.jsonl
+
+# Decode with HMAC integrity verification (Secure Interactive Mode)
+# This will prompt securely: "HMAC Secret Key:"
+loggerbuf decode logs/telemetry_queue.bin --verify
+
+# Decode with HMAC integrity verification (Explicit Mode for CI/Agents)
+loggerbuf decode logs/telemetry_queue.bin --verify "YOUR_SECRET_KEY"
 ```
 
 **2. Exploring Debug History:**

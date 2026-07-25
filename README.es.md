@@ -278,6 +278,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 
 | Comando | Descripción |
 |---|---|
+| `loggerbuf --version` | Muestra la versión actual de LoggerBuf instalada en el sistema. |
 | `loggerbuf init` | Comando maestro que inicializa configuración y esquemas a la vez. |
 | `loggerbuf config init` | Genera el archivo de configuración `loggerbuf.json` por defecto. |
 | `loggerbuf protos init` | Inicializa el directorio `loggerbuf_schemas/` con los esquemas base (no compila). |
@@ -294,7 +295,7 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 | `loggerbuf filter add` | Agrega restricciones a las clases o niveles, u oculta metadatos con `--hide-metadata` o `--hide-console-metadata`. |
 | `loggerbuf filter remove` | Elimina restricciones de clases/niveles o restaura metadatos ocultos con `--show-metadata` o `--show-console-metadata`. |
 | `loggerbuf filter reset` | Restaura filtros específicos (ej. `--classes`, `--metadata`) o todos (`--all`) a sus valores por defecto. |
-| `loggerbuf decode-logs <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. |
+| `loggerbuf decode <File>` | Decodifica logs binarios de telemetría a Terminal o JSONL. Soporta `--verify`. |
 | `loggerbuf event add-type <Name>` | Añade una nueva sub-clasificación `EventType` a tu proyecto. |
 | `loggerbuf event add-status <Type> <Status>`| Añade un nuevo `EventStatus` bajo un `EventType` existente. |
 | `loggerbuf add-counter-type <Type>` | Agrega un nuevo tipo de contador a tu `registry.proto`. Soporta rangos: `--start` y `--end`. |
@@ -307,10 +308,17 @@ El CLI de LoggerBuf (`loggerbuf`) es el **ciudadano de primera clase** para gest
 Extrae miles de eventos binarios a un JSON legible en milisegundos.
 ```bash
 # Imprime en formato JSON legible en la terminal
-loggerbuf decode-logs logs/telemetry_queue.bin
+loggerbuf decode logs/telemetry_queue.bin
 
 # Decodifica directo a un archivo JSONL para bases de datos
-loggerbuf decode-logs logs/telemetry_queue.bin --out output.jsonl
+loggerbuf decode logs/telemetry_queue.bin --out output.jsonl
+
+# Decodificar validando la integridad HMAC (Modo Seguro Interactivo)
+# Esto pedirá de forma segura: "HMAC Secret Key:"
+loggerbuf decode logs/telemetry_queue.bin --verify
+
+# Decodificar validando la integridad HMAC (Modo Explícito para CI/Agentes)
+loggerbuf decode logs/telemetry_queue.bin --verify "TU_LLAVE_SECRETA"
 ```
 
 **2. Explorar el Historial de Depuración:**
