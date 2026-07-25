@@ -11,6 +11,7 @@ from loggerbuf.cli.handlers import filter as filter_handler
 from ..config import ConfigManager, ConfigKey, LogMetadata
 
 @click.group()
+@click.version_option(package_name='loggerbuf')
 def cli():
     """LoggerBuf CLI - Asynchronous Telemetry Framework."""
     pass

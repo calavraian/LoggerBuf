@@ -35,6 +35,11 @@ def test_init(mock_c_init, mock_p_init, mock_build, runner):
     assert result.exit_code == 0
     assert "Project initialized successfully" in result.output
 
+def test_version(runner):
+    result = runner.invoke(cli, ['--version'])
+    assert result.exit_code == 0
+    assert "version" in result.output.lower()
+
 @patch('loggerbuf.cli.console.protos')
 def test_build(mock_protos, runner):
     result = runner.invoke(cli, ['build'])
