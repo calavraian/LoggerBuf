@@ -48,6 +48,14 @@ class ConfigKey(str, Enum):
     METRIC_QUEUE_STRATEGY = "METRIC_QUEUE_STRATEGY"
     
     HMAC_SECRET_KEY = "HMAC_SECRET_KEY"
+    PII_MASK_ENABLED = "PII_MASK_ENABLED"
+    PII_MASK_METHOD = "PII_MASK_METHOD"
+    PII_HASH_SALT = "PII_HASH_SALT"
+    PII_PROTECTED_FIELDS = "PII_PROTECTED_FIELDS"
+
+class PiiMethod(str, Enum):
+    REDACTED = "REDACTED"
+    HASH = "HASH"
 
 class LogMetadata(str, Enum):
     TIMESTAMP = "TIMESTAMP"
@@ -101,7 +109,11 @@ DEFAULT_CONFIG = {
     "STRESS_TEST_THREADS": 10,
     "STRESS_TEST_WRITES": 10000,
     "STRESS_TEST_DURATION": 0,
-    "HMAC_SECRET_KEY": None
+    "HMAC_SECRET_KEY": None,
+    "PII_MASK_ENABLED": True,
+    "PII_MASK_METHOD": "REDACTED",
+    "PII_HASH_SALT": None,
+    "PII_PROTECTED_FIELDS": ["password", "secret", "token", "api_key", "access_token", "ssn", "credit_card"]
 }
 
 CONFIG_CHOICES = {
@@ -111,7 +123,9 @@ CONFIG_CHOICES = {
     "METRIC_QUEUE_STRATEGY": ["LOSSY", "LOSSLESS"],
     "LOGGING_DESTINATION": ["CONSOLE", "FILE_LIVE", "FILE_HISTORY", "CONSOLE_AND_FILE_LIVE", "CONSOLE_AND_FILE_HISTORY"],
     "METRICS_ENABLED": [True, False],
-    "LOGGING_CONSOLE_ENABLED": [True, False]
+    "LOGGING_CONSOLE_ENABLED": [True, False],
+    "PII_MASK_ENABLED": [True, False],
+    "PII_MASK_METHOD": ["REDACTED", "HASH"]
 }
 
 class ConfigManager:
