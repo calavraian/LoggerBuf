@@ -1,6 +1,9 @@
 from .debugger import DebuggerLog, LoggerSettings, LogDestination, LogLevel
 from .telemetry import TelemetryLog, EventSettings
 from .cli.handlers.decode import decode_file
+from .pii import pii_mask
+
+__all__ = ['create_debugger', 'create_telemetry', 'decode_file', 'pii_mask']
 
 def create_debugger(name=None, stream=None, logs_base_dir="."):
     """
