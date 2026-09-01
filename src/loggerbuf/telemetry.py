@@ -413,22 +413,42 @@ class TelemetryLog:
             
         event.logger_name = self.__settings.get_name()
         
+        from .config import ConfigKey
+        from .pii import apply_pii_mask
+        
+        is_pii_enabled = ConfigManager().get(ConfigKey.PII_MASK_ENABLED, True)
+        pii_protected_fields = ConfigManager().get(ConfigKey.PII_PROTECTED_FIELDS, []) if is_pii_enabled else []
+        pii_protected_lower = [str(f).lower() for f in pii_protected_fields]
+
         import warnings
-        def _check_deprecated_fields(msg, prefix=""):
+        def _process_fields(msg, prefix=""):
             for field_descriptor, value in msg.ListFields():
                 field_path = f"{prefix}{field_descriptor.name}"
+                
+                # Check deprecation
                 if field_descriptor.GetOptions().deprecated:
                     warnings.warn(
                         f"LoggerBuf: You are sending telemetry using a DEPRECATED field '{field_path}'."
                     )
+                
+                # Apply PII Masking
+                if field_descriptor.name.lower() in pii_protected_lower:
+                    if field_descriptor.type == field_descriptor.TYPE_STRING:
+                        if field_descriptor.is_repeated:
+                            masked_vals = [apply_pii_mask(v) for v in value]
+                            getattr(msg, field_descriptor.name)[:] = masked_vals
+                        else:
+                            setattr(msg, field_descriptor.name, apply_pii_mask(value))
+
+                # Recurse
                 if field_descriptor.type == field_descriptor.TYPE_MESSAGE:
                     if field_descriptor.is_repeated:
                         for idx, item in enumerate(value):
-                            _check_deprecated_fields(item, f"{field_path}[{idx}].")
+                            _process_fields(item, f"{field_path}[{idx}].")
                     else:
-                        _check_deprecated_fields(value, f"{field_path}.")
+                        _process_fields(value, f"{field_path}.")
 
-        _check_deprecated_fields(event)
+        _process_fields(event)
         self.__event_writer.write_event(event)
 
     def increment(self, counter_type, value: int = 1, stack_depth: int = 1):

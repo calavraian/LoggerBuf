@@ -566,14 +566,23 @@ class DebuggerLog:
     def __log_message(self, level, message):
         extra = {"caller_class": self.__get_caller_class()}
         
+        from .config import ConfigManager, ConfigKey
+        from .pii import mask_dict
+        
+        config = ConfigManager()
+        is_pii_enabled = config.get(ConfigKey.PII_MASK_ENABLED, True)
+        protected_fields = config.get(ConfigKey.PII_PROTECTED_FIELDS, []) if is_pii_enabled else []
+        
         if isinstance(message, (dict, list, tuple)):
             try:
-                message = json.dumps(message, default=str, ensure_ascii=False, indent=2)
+                masked_message = mask_dict(message, protected_fields)
+                message = json.dumps(masked_message, default=str, ensure_ascii=False, indent=2)
             except Exception as e:
                 message = f"<[Unserializable Object: {type(message).__name__}] - {e}>"
         elif hasattr(message, '__dict__'):
             try:
-                message = json.dumps(message.__dict__, default=str, ensure_ascii=False, indent=2)
+                masked_message = mask_dict(message.__dict__, protected_fields)
+                message = json.dumps(masked_message, default=str, ensure_ascii=False, indent=2)
             except Exception as e:
                 message = f"<[Unserializable Object: {type(message).__name__}] - {e}>"
 
