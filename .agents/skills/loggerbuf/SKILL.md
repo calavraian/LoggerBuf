@@ -222,3 +222,5 @@ If the user asks you to implement an event but hasn't provided all the data fiel
 6. Did I import classes/enums directly from `loggerbuf_schemas` instead of using `_pb2` files?
 7. Did I use the DRY pattern (`log_event` / `event_context`) for Python implementation?
 8. Did I deprecate instead of deleting fields?
+
+- **PII Masking**: You can use `from loggerbuf import pii_mask` to mask PII values before logging them. The system also automatically masks dictionary keys and protobuf fields matching `PII_PROTECTED_FIELDS` when `PII_MASK_ENABLED` is true.

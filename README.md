@@ -398,3 +398,24 @@ loggerbuf build
 
 **Does this mean every log entry is massive? No.**
 Protobuf is extremely efficient. Unpopulated fields take up **zero bytes** on disk. Even if your schema has 500 different events, a serialized log entry will only consume the exact bytes of the 1 event you actually populated.
+
+## PII Masking
+
+LoggerBuf provides a highly performant and secure feature to automatically mask Personally Identifiable Information (PII) before it is serialized and written to logs or events.
+
+You can enable or configure this globally using the CLI:
+```bash
+loggerbuf config set PII_MASK_ENABLED true
+loggerbuf config set PII_MASK_METHOD HASH  # or REDACTED (default)
+loggerbuf config set PII_PROTECTED_FIELDS "password,secret,token,api_key"
+```
+
+- **REDACTED**: Replaces the value with `[REDACTED]`.
+- **HASH**: Hashes the value with a secure SHA-256 HMAC hash `[HASH:1234567890]`. It automatically uses a session-bound salt to ensure determinism within the process lifecycle. You can configure `PII_HASH_SALT` manually for cross-session determinism.
+
+For unstructured data or manual string interpolation, use the helper function:
+```python
+from loggerbuf import pii_mask
+
+logger.info(f"User email is {pii_mask(user.email)}")
+```

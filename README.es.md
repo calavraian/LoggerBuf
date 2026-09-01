@@ -382,3 +382,24 @@ Notarás que `main_data.proto` actúa como un envoltorio gigante que contiene *a
 
 **¿Significa esto que cada log pesa una tonelada? ¡No!**
 Protobuf es extremadamente eficiente. Los campos no poblados ocupan **cero bytes** en el disco. Incluso si tu esquema tiene 500 eventos diferentes registrados, una entrada de log serializada solo consumirá los bytes exactos del único evento que realmente llenaste.
+
+## Enmascaramiento de PII
+
+LoggerBuf proporciona una funcionalidad de alto rendimiento y segura para enmascarar automáticamente Información de Identificación Personal (PII) antes de ser serializada o guardada en archivos.
+
+Puedes habilitar o configurar esto globalmente usando el CLI:
+```bash
+loggerbuf config set PII_MASK_ENABLED true
+loggerbuf config set PII_MASK_METHOD HASH  # o REDACTED (por defecto)
+loggerbuf config set PII_PROTECTED_FIELDS "password,secret,token,api_key"
+```
+
+- **REDACTED**: Reemplaza el valor con `[REDACTED]`.
+- **HASH**: Aplica un hash seguro SHA-256 HMAC truncado `[HASH:1234567890]`. Utiliza una sal generada por sesión para garantizar que el mismo dato genere el mismo hash en la misma ejecución. Puedes definir una sal global con `PII_HASH_SALT` si requieres rastreo cruzado persistente.
+
+Para interpolación manual de cadenas o datos no estructurados, utiliza el ayudante público:
+```python
+from loggerbuf import pii_mask
+
+logger.info(f"El correo del usuario es {pii_mask(user.email)}")
+```

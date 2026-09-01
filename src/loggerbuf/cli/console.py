@@ -405,7 +405,7 @@ def get(key):
     config_manager = ConfigManager()
     
     group = key.lower()
-    if group in ('all', 'logging', 'telemetry', 'metrics'):
+    if group in ('all', 'logging', 'telemetry', 'metrics', 'pii'):
         def print_group(prefix, title, color):
             click.secho(f"\n--- {title} ---", fg=color, bold=True)
             for k in DEFAULT_CONFIG.keys():
@@ -428,6 +428,8 @@ def get(key):
             print_group('EVENT_', 'TELEMETRY (EVENTS) SETTINGS', 'blue')
         if group in ('all', 'metrics'):
             print_group('METRIC_', 'METRICS (COUNTERS) SETTINGS', 'magenta')
+        if group in ('all', 'pii'):
+            print_group('PII_', 'PII MASKING SETTINGS', 'red')
         if group == 'all':
             print_group('STRESS_', 'STRESS TEST SETTINGS', 'yellow')
             print_group('HMAC_', 'SECURITY SETTINGS', 'red')
