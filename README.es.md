@@ -401,5 +401,9 @@ Para interpolación manual de cadenas o datos no estructurados, utiliza el ayuda
 ```python
 from loggerbuf import pii_mask
 
+# Aplica máscara si PII_MASK_ENABLED está activo
 logger.info(f"El correo del usuario es {pii_mask(user.email)}")
+
+# Fuerza el enmascaramiento ignorando si PII_MASK_ENABLED está apagado
+logger.info(f"Token secreto: {pii_mask(token, force=True)}")
 ```

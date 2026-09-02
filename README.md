@@ -417,5 +417,9 @@ For unstructured data or manual string interpolation, use the helper function:
 ```python
 from loggerbuf import pii_mask
 
+# Masks the email if PII_MASK_ENABLED is true
 logger.info(f"User email is {pii_mask(user.email)}")
+
+# Force masking even if PII_MASK_ENABLED is globally disabled
+logger.info(f"Secret token: {pii_mask(token, force=True)}")
 ```
