@@ -14,8 +14,14 @@ class TestPiiMasking(unittest.TestCase):
 
     def test_pii_mask_disabled(self):
         self.config.set(ConfigKey.PII_MASK_ENABLED, False)
+        # Should return raw value
         self.assertEqual(apply_pii_mask("sensitive_data"), "sensitive_data")
         self.assertEqual(pii_mask("sensitive_data"), "sensitive_data")
+        
+        # With force=True, it should mask even when disabled
+        self.config.set(ConfigKey.PII_MASK_METHOD, PiiMethod.REDACTED)
+        self.assertEqual(apply_pii_mask("sensitive_data", force=True), "[REDACTED]")
+        self.assertEqual(pii_mask("sensitive_data", force=True), "[REDACTED]")
 
     def test_pii_mask_redacted(self):
         self.config.set(ConfigKey.PII_MASK_METHOD, PiiMethod.REDACTED)
