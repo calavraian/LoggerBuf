@@ -2,7 +2,6 @@
     "LOG_LEVEL": "DEBUG",
     "LOGGING_BASE_DIR": "logs",
     "LOGGING_BACKUP_DIR": "history",
-    "LOGGING_MAIN_FILE_NAME": "logs",
     "LOGGING_DEBUG_FILE_NAME": "debug_logs",
     "LOGGING_BACKUP_COUNT": 2,
     "LOGGING_LOGGER_NAME": "MAIN",
@@ -52,5 +51,9 @@
     "STRESS_TEST_THREADS": 10,
     "STRESS_TEST_WRITES": 10000,
     "STRESS_TEST_DURATION": 0,
-    "HMAC_SECRET_KEY": null
+    "HMAC_SECRET_KEY": null,
+    "PII_MASK_ENABLED": true,
+    "PII_MASK_METHOD": "REDACTED",
+    "PII_HASH_SALT": null,
+    "PII_PROTECTED_FIELDS": "password,secret"
 }
