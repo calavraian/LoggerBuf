@@ -35,8 +35,10 @@ def apply_pii_mask(value: Any, force: bool = False) -> str:
 def pii_mask(value: Any, force: bool = False) -> str:
     return apply_pii_mask(value, force=force)
 
-def mask_dict(data: Any, protected_fields: list) -> Any:
+def mask_dict(data: Any, protected_fields: Any) -> Any:
     """Recursively mask dictionary values if their key is in protected_fields."""
+    if isinstance(protected_fields, str):
+        protected_fields = [f.strip() for f in protected_fields.split(",")]
     if not protected_fields:
         return data
         

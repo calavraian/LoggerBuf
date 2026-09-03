@@ -418,6 +418,8 @@ class TelemetryLog:
         
         is_pii_enabled = ConfigManager().get(ConfigKey.PII_MASK_ENABLED, True)
         pii_protected_fields = ConfigManager().get(ConfigKey.PII_PROTECTED_FIELDS, []) if is_pii_enabled else []
+        if isinstance(pii_protected_fields, str):
+            pii_protected_fields = [f.strip() for f in pii_protected_fields.split(",")]
         pii_protected_lower = [str(f).lower() for f in pii_protected_fields]
 
         import warnings
